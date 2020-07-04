@@ -4,6 +4,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Load() *gin.Engine {
-	return gin.Default()
+var server *gin.Engine
+
+func init() {
+	server = gin.Default()
+}
+
+func Run() {
+	server.Run(":8081")
 }

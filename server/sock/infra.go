@@ -1,23 +1,35 @@
 package sock
 
 import (
-	"container/list"
+    "container/list"
+    "github.com/gin-gonic/gin"
     "log"
-    "net"
-	"sync"
+    "sync"
+
+    "github.com/gorilla/websocket"
 )
 
 const (
 	OptJoin  = 0x00
 	OptLeave = 0x01
+	OptMessage = 0x02
 )
 
 var groups = make(map[string]*group)
 var groupsChannel = make(chan *groupOperation)
+var upGrader = websocket.Upgrader{}
 
 type groupOperation struct {
 	id   string
-	client *client
+	client *Client
+}
+
+func Upgrade(c *gin.Context) (*websocket.Conn, error) {
+    return upGrader.Upgrade(c.Writer, c.Request, nil)
+}
+
+func NewClient(id string, c *Client) {
+    groupsChannel <- &groupOperation{id, c}
 }
 
 func handleGroupOperation() {
@@ -25,11 +37,11 @@ func handleGroupOperation() {
 		if opt.client != nil {
 			g, ok := groups[opt.id]
 			if !ok {
-				g = &group{id: opt.id, broker: make(chan *message, 32)}
+				g = &group{id: opt.id, clients: make(map[*Client]bool), broker: make(chan *Message, 256)}
 				groups[opt.id] = g
 				go g.brokeMessage()
 			}
-			g.broker <- &message{opt.client, nil, OptJoin}
+			g.broker <- &Message{opt.client, nil, OptJoin}
 		} else {
 			if g, ok := groups[opt.id]; ok {
 				close(g.broker)
@@ -39,77 +51,102 @@ func handleGroupOperation() {
 	}
 }
 
-type message struct {
-	client    *client
-	content   interface{}
+type Message struct {
+	Client    *Client
+	Content   interface{}
 	operation int
 }
 
-type client struct {
-	sock   *net.TCPConn
+type Client struct {
+	sock   *websocket.Conn
+	Info   interface{}
 	output *list.List
 	lock   *sync.Mutex
 }
 
 type group struct {
 	id      string
-	broker  chan *message
+	broker  chan *Message
+    clients map[*Client]bool
 }
 
-func (c *client) scheduleSend(msg *message) {
+func CountGroupClient(id string) int {
+    if g, ok := groups[id]; ok {
+        return len(g.clients)
+    }
+    return 0
+}
+
+func (c *Client) scheduleSend(content interface{}) {
     if c.output.Len() != 0 {
         c.lock.Lock()
         defer c.lock.Unlock()
-        c.output.PushBack(msg)
+        c.output.PushBack(content)
         if c.output.Len() == 1 {
-            go c.send(msg)
+            go c.send(content)
         }
     } else {
-        c.output.PushBack(msg)
-        go c.send(msg)
+        c.output.PushBack(content)
+        go c.send(content)
     }
 }
 
-func (c *client) send(msg *message) {
+func (c *Client) send(content interface{}) {
     for {
-        if _, err := c.sock.Write(msg.content.([]byte)); err != nil {
+        if err := c.sock.WriteJSON(content); err != nil {
         }
         c.lock.Lock()
+        l := c.output.Len()
         c.output.Remove(c.output.Front())
-        if c.output.Len() == 0 {
+        if l == 1 {
             c.lock.Unlock()
             return
         }
-        msg = c.output.Front().Value.(*message)
+        content = c.output.Front().Value
         c.lock.Unlock()
     }
 }
 
-func (c *client) recv() {
-
+func (c *Client) recv(broker chan *Message) {
+    for {
+        content := make(map[string]interface{})
+        if err := c.sock.ReadJSON(&content); err != nil {
+        }
+        handler(&Message{c, content, OptMessage}, broker)
+    }
 }
 
 func (g *group) brokeMessage() {
-    clients := make(map[*client]bool)
-    var orphans []*client
+
+    var orphans []*Client
     closed := false
     for msg := range g.broker {
         switch msg.operation {
         case OptJoin:
             if !closed {
-                clients[msg.client] = true
-                go msg.client.recv()
+                g.clients[msg.Client] = true
+                go msg.Client.recv(g.broker)
             } else {
-                orphans = append(orphans, msg.client)
+                orphans = append(orphans, msg.Client)
             }
         case OptLeave:
-            delete(clients, msg.client)
-            if err := msg.client.sock.Close(); err != nil {
+            delete(g.clients, msg.Client)
+            if err := msg.Client.sock.Close(); err != nil {
                 log.Println(err)
             }
-            if len(clients) == 0 && !closed {
+            if len(g.clients) == 0 && !closed {
                 closed = true
                 go func() {groupsChannel <- &groupOperation{g.id, nil}} ()
+            }
+        case OptMessage:
+            if !closed {
+                if msg.Client == nil {
+                    for c, _ := range g.clients {
+                        c.scheduleSend(msg.Content)
+                    }
+                } else if _, ok := g.clients[msg.Client]; ok {
+                    msg.Client.scheduleSend(msg.Content)
+                }
             }
         }
     }

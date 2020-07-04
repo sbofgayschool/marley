@@ -40,7 +40,6 @@ type videoAudioTrack struct {
 }
 
 type broadcaster struct {
-    Note interface{}
     identifier string
     tracks []*videoAudioTrack
 }
@@ -56,6 +55,8 @@ func addBroadcaster(id string, quality int, identifier string) error {
 }
 
 func dropBroadcaster(id, identifier string) {
+    lock.Lock()
+    defer lock.Unlock()
     if b, ok := broadcasters[id]; ok && b.identifier == identifier {
         delete(broadcasters, id)
     }
@@ -139,6 +140,8 @@ func newPeerConnectionWriter(id string, tracks map[string][]int, offer *webrtc.S
             if err != nil {
                 panic(err)
             }
+            if err = localTrack.writer.WriteRTP(rtp); err != nil {
+            }
             // ErrClosedPipe means we don't have any subscribers, this is ok if no peers have connected yet
             if err = localTrack.track.WriteRTP(rtp); err != nil && err != io.ErrClosedPipe {
                 panic(err)
@@ -165,7 +168,7 @@ func newPeerConnectionWriter(id string, tracks map[string][]int, offer *webrtc.S
     return &answer, nil
 }
 
-func newPeerConnectionReader(id string, quality int, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
+func newPeerConnectionReader(id string, quality int, videoRequired bool, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
     peerConnection, err := api.NewPeerConnection(config)
     if err != nil {
         return nil, err
@@ -174,38 +177,16 @@ func newPeerConnectionReader(id string, quality int, offer *webrtc.SessionDescri
     if err != nil {
         return nil, err
     }
-    audioSender, err := peerConnection.AddTrack(audioTrack)
-    if err != nil {
+    if _, err := peerConnection.AddTrack(audioTrack); err != nil {
         return nil, err
     }
-    go func() {
-        for {
-            pkg, err := audioSender.ReadRTCP()
-            if err != nil {
-                log.Println(err)
-            } else {
-                log.Println(pkg)
-            }
-        }
-    }()
     videoTrack, err := getTrack(id, quality, true)
     if err != nil {
         return nil, err
-    } else if videoTrack != nil {
-        videoSender, err := peerConnection.AddTrack(videoTrack)
-        if err != nil {
+    } else if videoRequired && videoTrack != nil {
+        if _, err := peerConnection.AddTrack(videoTrack); err != nil {
             return nil, err
         }
-        go func() {
-            for {
-                pkg, err := videoSender.ReadRTCP()
-                if err != nil {
-                    log.Println(err)
-                } else {
-                    log.Println(pkg)
-                }
-            }
-        }()
     }
     peerConnection.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
     })

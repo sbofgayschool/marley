@@ -33,9 +33,9 @@ func SetConnectionDoneCallback(f func(string, int64)) {
 	connectionDoneCallback = f
 }
 
-var trackDoneCallback func(string, int64, int, bool)
+var trackDoneCallback func(string, int64, int, bool, string)
 
-func SetTrackDoneCallback(f func(string, int64, int, bool)) {
+func SetTrackDoneCallback(f func(string, int64, int, bool, string)) {
 	trackDoneCallback = f
 }
 
@@ -98,9 +98,11 @@ func setTrack(id string, quality int, video bool, timestamp int64, conn *webrtc.
 		return nil, errors.New("incorrect quality parameter")
 	}
 	if video {
+		// TODO: Add information for writer and filename, and start the writer
 		b.tracks[quality].video = &writingTrack{track: localTrack}
 		return b.tracks[quality].video, nil
 	}
+	// TODO: Add information for writer and filename, and start the writer
 	b.tracks[quality].audio = &writingTrack{track: localTrack}
 	return b.tracks[quality].audio, nil
 }
@@ -147,7 +149,10 @@ func NewPeerConnectionWriter(id string, timestamp int64, tracks [][]string, offe
 			log.Println(err)
 			return
 		}
-		defer trackDoneCallback(id, timestamp, quality, video == 1)
+		defer func() {
+			// TODO: Stop the writer and finalized the file.
+			trackDoneCallback(id, timestamp, quality, video == 1, localTrack.filename)
+		}()
 		go func() {
 			ticker := time.NewTicker(rtcpInterval)
 			for range ticker.C {

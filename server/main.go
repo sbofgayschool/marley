@@ -1,10 +1,9 @@
 package main
 
 import (
-	_ "github.com/sbofgayschool/marley/server/rtc"
-	"github.com/sbofgayschool/marley/server/www"
+	"github.com/sbofgayschool/marley/server/service"
 )
 
 func main() {
-	www.Run()
+	service.Run()
 }

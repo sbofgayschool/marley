@@ -20,11 +20,11 @@ const (
 )
 
 type Broadcaster struct {
-	Timestamp int64
-	Qualities int
-	Pdf string
+	Timestamp  int64
+	Qualities  int
+	Pdf        string
 	operations []*operation
-	chats []*chat.Chat
+	chats      []*chat.Chat
 }
 
 var broadcasters = make(map[string]*Broadcaster)
@@ -155,7 +155,7 @@ func sockHandler(msg *sock.Message, broker chan *sock.Message) {
 				"Timestamp":    b.Timestamp,
 				"Error":        "",
 				"Operations":   fetchOperations(b),
-				"Chats":		b.chats,
+				"Chats":        b.chats,
 			}}
 		}
 	case "opt":

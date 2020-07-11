@@ -3,6 +3,7 @@ package sock
 import (
 	"container/list"
 	"github.com/gin-gonic/gin"
+	"io"
 	"log"
 	"sync"
 
@@ -95,23 +96,25 @@ func CountGroupClient(id string) int {
 	return 0
 }
 
-func (c *Client) scheduleSend(content interface{}) {
+func (c *Client) scheduleSend(content interface{}, broker chan *Message) {
 	if c.output.Len() != 0 {
 		c.lock.Lock()
 		defer c.lock.Unlock()
 		c.output.PushBack(content)
 		if c.output.Len() == 1 {
-			go c.send(content)
+			go c.send(content, broker)
 		}
 	} else {
 		c.output.PushBack(content)
-		go c.send(content)
+		go c.send(content, broker)
 	}
 }
 
-func (c *Client) send(content interface{}) {
+func (c *Client) send(content interface{}, broker chan *Message) {
 	for {
 		if err := c.sock.WriteJSON(content); err != nil {
+			broker <- &Message{operation: OptJoin, Client: c}
+			return
 		}
 		c.lock.Lock()
 		l := c.output.Len()
@@ -129,6 +132,10 @@ func (c *Client) recv(broker chan *Message) {
 	for {
 		content := make(map[string]interface{})
 		if err := c.sock.ReadJSON(&content); err != nil {
+			if err == io.EOF {
+				broker <- &Message{operation: OptJoin, Client: c}
+				return
+			}
 		}
 		handler(&Message{c, content, OptMessage}, broker)
 	}
@@ -141,28 +148,32 @@ func (g *group) brokeMessage() {
 		switch msg.operation {
 		case OptJoin:
 			if !closed {
-				g.clients[msg.Client] = true
-				go msg.Client.recv(g.broker)
+				if _, ok := g.clients[msg.Client]; !ok {
+					g.clients[msg.Client] = true
+					go msg.Client.recv(g.broker)
+				}
 			} else {
 				orphans = append(orphans, msg.Client)
 			}
 		case OptLeave:
-			delete(g.clients, msg.Client)
-			if err := msg.Client.sock.Close(); err != nil {
-				log.Println(err)
-			}
-			if len(g.clients) == 0 && !closed {
-				closed = true
-				go func() { groupsChannel <- &groupOperation{g.id, nil} }()
+			if _, ok := g.clients[msg.Client]; ok {
+				delete(g.clients, msg.Client)
+				if err := msg.Client.sock.Close(); err != nil {
+					log.Println(err)
+				}
+				if len(g.clients) == 0 && !closed {
+					closed = true
+					go func() { groupsChannel <- &groupOperation{g.id, nil} }()
+				}
 			}
 		case OptMessage:
 			if !closed {
 				if msg.Client == nil {
 					for c := range g.clients {
-						c.scheduleSend(msg.Content)
+						c.scheduleSend(msg.Content, g.broker)
 					}
 				} else if _, ok := g.clients[msg.Client]; ok {
-					msg.Client.scheduleSend(msg.Content)
+					msg.Client.scheduleSend(msg.Content, g.broker)
 				}
 			}
 		}

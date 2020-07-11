@@ -1,15 +1,15 @@
 package common
 
 import (
-    "strings"
+	"strings"
 
-    "github.com/sbofgayschool/marley/server/infra/sock"
+	"github.com/sbofgayschool/marley/server/infra/sock"
 )
 
 func GetIdVodId(id string) []string {
-    return strings.Split(id, "-")
+	return strings.Split(id, "-")
 }
 
 func GetCurrentAudience(id string) int {
-    return sock.CountGroupClient(id)
+	return sock.CountGroupClient(id)
 }

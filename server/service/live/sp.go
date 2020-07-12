@@ -10,7 +10,7 @@ type operation struct {
 	elapsedTime int64
 }
 
-func addOperation(id string, opt string, timestamp int64) error {
+func addOperation(id string, timestamp int64, opt string) error {
 	b, ok := broadcasters[id]
 	if !ok || b.Timestamp != timestamp {
 		return errors.New("broadcasting has stopped")

@@ -38,12 +38,12 @@ func chatMessage(id string, username string, msgType string, message string, ela
 	}
 }
 
-func sockHandler(msg *sock.Message, broker chan *sock.Message) {
+func sockHandler(msg *sock.Message, _ chan *sock.Message) (res []*sock.Message) {
 	content := msg.Content.(map[string]interface{})
 	u := msg.Client.Info.(*user.SockUser)
 	switch content[OperationField].(string) {
 	case "NumQuery":
-		broker <- &sock.Message{Client: msg.Client, Content: map[string]interface{}{"Num": common.GetCurrentAudience(msg.Client.Gid)}}
+		res = append(res, &sock.Message{Client: msg.Client, Content: map[string]interface{}{"Num": common.GetCurrentAudience(msg.Client.Gid)}})
 	case "Message":
 		content["Username"] = u.Username
 		elapsedTime := time.Now().Unix()
@@ -51,6 +51,7 @@ func sockHandler(msg *sock.Message, broker chan *sock.Message) {
 			elapsedTime = e.(int64)
 		}
 		chatMessage(msg.Client.Gid, u.Username, content["MsgType"].(string), content["Message"].(string), elapsedTime)
-		broker <- &sock.Message{Client: nil, Content: content}
+		res = append(res, &sock.Message{Client: nil, Content: content})
 	}
+	return
 }

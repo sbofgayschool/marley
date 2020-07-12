@@ -6,6 +6,6 @@ import (
 )
 
 func main() {
-	go sock.HandleGroupOperation()
+	go sock.Run()
 	service.Run()
 }

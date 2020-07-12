@@ -11,25 +11,27 @@ import (
 )
 
 const (
+	OptMessage = 0x00
 	OptJoin    = 0x01
 	OptLeave   = 0x02
-	OptMessage = 0x00
+	OptRaw     = 0x03
 )
 
 const (
 	TagField = "type"
 )
 
-var registeredHandler = make(map[string]func(*Message, chan *Message))
+var registeredHandler = make(map[string]func(*Message, chan *Message) []*Message)
 
-func RegisterHandler(tag string, f func(*Message, chan *Message)) {
+func RegisterHandler(tag string, f func(*Message, chan *Message) []*Message) {
 	registeredHandler[tag] = f
 }
 
-func handler(msg *Message, broker chan *Message) {
+func handler(msg *Message, broker chan *Message) []*Message {
 	if h, ok := registeredHandler[msg.Content.(map[string]interface{})[TagField].(string)]; ok {
-		h(msg, broker)
+		return h(msg, broker)
 	}
+	return nil
 }
 
 var groups = make(map[string]*group)
@@ -50,7 +52,7 @@ func NewClient(c *gin.Context, id string, userInfo interface{}) error {
 	return nil
 }
 
-func HandleGroupOperation() {
+func Run() {
 	for opt := range groupsChannel {
 		if opt.client != nil {
 			g, ok := groups[opt.id]
@@ -113,7 +115,7 @@ func (c *Client) scheduleSend(content interface{}, broker chan *Message) {
 func (c *Client) send(content interface{}, broker chan *Message) {
 	for {
 		if err := c.sock.WriteJSON(content); err != nil {
-			broker <- &Message{operation: OptJoin, Client: c}
+			broker <- &Message{operation: OptLeave, Client: c}
 			return
 		}
 		c.lock.Lock()
@@ -133,11 +135,11 @@ func (c *Client) recv(broker chan *Message) {
 		content := make(map[string]interface{})
 		if err := c.sock.ReadJSON(&content); err != nil {
 			if err == io.EOF {
-				broker <- &Message{operation: OptJoin, Client: c}
+				broker <- &Message{operation: OptLeave, Client: c}
 				return
 			}
 		}
-		handler(&Message{c, content, OptMessage}, broker)
+		broker <- &Message{c, content, OptRaw}
 	}
 }
 
@@ -146,6 +148,16 @@ func (g *group) brokeMessage() {
 	closed := false
 	for msg := range g.broker {
 		switch msg.operation {
+		case OptMessage:
+			if !closed {
+				if msg.Client == nil {
+					for c := range g.clients {
+						c.scheduleSend(msg.Content, g.broker)
+					}
+				} else if _, ok := g.clients[msg.Client]; ok {
+					msg.Client.scheduleSend(msg.Content, g.broker)
+				}
+			}
 		case OptJoin:
 			if !closed {
 				if _, ok := g.clients[msg.Client]; !ok {
@@ -166,14 +178,17 @@ func (g *group) brokeMessage() {
 					go func() { groupsChannel <- &groupOperation{g.id, nil} }()
 				}
 			}
-		case OptMessage:
+		case OptRaw:
 			if !closed {
-				if msg.Client == nil {
-					for c := range g.clients {
-						c.scheduleSend(msg.Content, g.broker)
+				res := handler(msg, g.broker)
+				for _, msg := range res {
+					if msg.Client == nil {
+						for c := range g.clients {
+							c.scheduleSend(msg.Content, g.broker)
+						}
+					} else if _, ok := g.clients[msg.Client]; ok {
+						msg.Client.scheduleSend(msg.Content, g.broker)
 					}
-				} else if _, ok := g.clients[msg.Client]; ok {
-					msg.Client.scheduleSend(msg.Content, g.broker)
 				}
 			}
 		}

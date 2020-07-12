@@ -13,5 +13,5 @@ func init() {
 }
 
 func Run() {
-	server.Run(":8081")
+	_ = server.Run(":8081")
 }

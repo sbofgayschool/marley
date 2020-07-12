@@ -9,7 +9,7 @@ import (
 
 const (
 	Tag            = "chat"
-	OperationField = "operation"
+	OperationField = "Operation"
 )
 
 func init() {
@@ -29,10 +29,10 @@ func SetLiveMessageCallback(f func(string, *Chat)) {
 	liveMessageCallback = f
 }
 
-func chatMessage(id string, username string, msgType string, message string, elapsedTime int64) {
+func chatMessage(id string, chat *Chat) {
 	ids := common.GetIdVodId(id)
 	if len(ids) == 1 {
-		liveMessageCallback(id, &Chat{Username: username, MsgType: msgType, Message: message, ElapsedTime: elapsedTime})
+		liveMessageCallback(id, chat)
 	} else {
 		// TODO: Put the message directly into the database.
 	}
@@ -42,16 +42,28 @@ func sockHandler(msg *sock.Message, _ chan *sock.Message) (res []*sock.Message) 
 	content := msg.Content.(map[string]interface{})
 	u := msg.Client.Info.(*user.SockUser)
 	switch content[OperationField].(string) {
-	case "NumQuery":
-		res = append(res, &sock.Message{Client: msg.Client, Content: map[string]interface{}{"Num": common.GetCurrentAudience(msg.Client.Gid)}})
-	case "Message":
+	case "numQuery":
+		res = append(res, &sock.Message{Client: msg.Client, Content: map[string]interface{}{
+			sock.TagField:  Tag,
+			OperationField: "numQuery",
+			"Num":          common.GetCurrentAudience(msg.Client.Gid),
+		}})
+	case "message":
 		content["Username"] = u.Username
 		elapsedTime := time.Now().Unix()
 		if e, ok := content["ElapsedTime"]; ok {
 			elapsedTime = e.(int64)
 		}
-		chatMessage(msg.Client.Gid, u.Username, content["MsgType"].(string), content["Message"].(string), elapsedTime)
-		res = append(res, &sock.Message{Client: nil, Content: content})
+		chat := &Chat{u.Username, content["MsgType"].(string), content["Message"].(string), elapsedTime}
+		chatMessage(msg.Client.Gid, chat)
+		res = append(res, &sock.Message{Client: nil, Content: map[string]interface{}{
+			sock.TagField:  Tag,
+			OperationField: "message",
+			"Username":     chat.Username,
+			"MsgType":      chat.MsgType,
+			"Message":      chat.Message,
+			"ElapsedTime":  chat.ElapsedTime,
+		}})
 	}
 	return
 }

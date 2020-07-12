@@ -18,7 +18,7 @@ const (
 )
 
 const (
-	TagField = "type"
+	TagField = "Type"
 )
 
 var registeredHandler = make(map[string]func(*Message, chan *Message) []*Message)
@@ -29,6 +29,7 @@ func RegisterHandler(tag string, f func(*Message, chan *Message) []*Message) {
 
 func handler(msg *Message, broker chan *Message) []*Message {
 	if h, ok := registeredHandler[msg.Content.(map[string]interface{})[TagField].(string)]; ok {
+
 		return h(msg, broker)
 	}
 	return nil
@@ -134,8 +135,11 @@ func (c *Client) recv(broker chan *Message) {
 	for {
 		content := make(map[string]interface{})
 		if err := c.sock.ReadJSON(&content); err != nil {
-			if err == io.EOF {
+			if err == io.EOF || websocket.IsCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
 				broker <- &Message{operation: OptLeave, Client: c}
+				return
+			} else {
+				log.Println(err)
 				return
 			}
 		}

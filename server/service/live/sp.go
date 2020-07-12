@@ -19,10 +19,9 @@ func addOperation(id string, timestamp int64, opt string) error {
 	return nil
 }
 
-func fetchOperations(b *Broadcaster) ([]string, error) {
-	var res []string
+func fetchOperations(b *Broadcaster) (res []string) {
 	for _, opt := range b.operations {
 		res = append(res, opt.opt)
 	}
-	return res, nil
+	return
 }

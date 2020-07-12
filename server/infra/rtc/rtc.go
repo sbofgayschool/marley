@@ -69,6 +69,9 @@ func addBroadcaster(id string, quality int, timestamp int64) error {
 		return errors.New("")
 	}
 	broadcasters[id] = &broadcaster{tracks: make([]*videoAudioTrack, quality), timestamp: timestamp}
+	for i := 0; i < quality; i++ {
+		broadcasters[id].tracks[i] = new(videoAudioTrack)
+	}
 	return nil
 }
 
@@ -103,6 +106,8 @@ func setTrack(id string, quality int, video bool, timestamp int64, conn *webrtc.
 		return b.tracks[quality].video, nil
 	}
 	// TODO: Add information for writer and filename, and start the writer
+	log.Println(len(b.tracks))
+	log.Println(id, quality, video)
 	b.tracks[quality].audio = &writingTrack{track: localTrack}
 	return b.tracks[quality].audio, nil
 }
@@ -131,10 +136,15 @@ func NewPeerConnectionWriter(id string, timestamp int64, tracks [][]string, offe
 	if _, err := peerConnection.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo); err != nil {
 		return nil, err
 	}
+	if _, err := peerConnection.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio); err != nil {
+		return nil, err
+	}
+	log.Println(tracks)
 	if err := addBroadcaster(id, len(tracks), timestamp); err != nil {
 		return nil, err
 	}
 	peerConnection.OnTrack(func(remoteTrack *webrtc.Track, receiver *webrtc.RTPReceiver) {
+		log.Println(remoteTrack.ID())
 		var quality, video int
 		for q, t := range tracks {
 			for v, i := range t {
@@ -166,7 +176,8 @@ func NewPeerConnectionWriter(id string, timestamp int64, tracks [][]string, offe
 				}
 				if rtcpSendErr := peerConnection.WriteRTCP([]rtcp.Packet{&rtcp.ReceiverEstimatedMaximumBitrate{
 					SenderSSRC: remoteTrack.SSRC(),
-					Bitrate:    qualityBitrate[quality][video],
+					// Bitrate:    qualityBitrate[quality][video],
+					Bitrate:    1e8,
 				}}); rtcpSendErr != nil {
 					log.Println(rtcpSendErr)
 				}
@@ -182,9 +193,11 @@ func NewPeerConnectionWriter(id string, timestamp int64, tracks [][]string, offe
 				log.Println(err)
 				continue
 			}
+			/*
 			if err = localTrack.writer.WriteRTP(rtp); err != nil {
 				log.Println(err)
 			}
+			*/
 			// ErrClosedPipe means we don't have any subscribers, this is ok if no peers have connected yet
 			if err = localTrack.track.WriteRTP(rtp); err != nil && err != io.ErrClosedPipe {
 				log.Println(err)
@@ -192,10 +205,14 @@ func NewPeerConnectionWriter(id string, timestamp int64, tracks [][]string, offe
 		}
 	})
 	peerConnection.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
-		if connectionState == webrtc.ICEConnectionStateFailed {
-			stopped = true
-			_ = peerConnection.Close()
-			connectionDoneCallback(id, timestamp)
+		log.Println(connectionState)
+		if connectionState == webrtc.ICEConnectionStateFailed || connectionState == webrtc.ICEConnectionStateClosed {
+			if !stopped {
+				stopped = true
+				_ = peerConnection.Close()
+				dropBroadcaster(id, timestamp)
+				connectionDoneCallback(id, timestamp)
+			}
 		}
 	})
 	if err := peerConnection.SetRemoteDescription(*offer); err != nil {

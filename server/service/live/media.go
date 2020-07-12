@@ -17,7 +17,7 @@ import (
 
 const (
 	Tag            = "live"
-	OperationField = "operation"
+	OperationField = "Operation"
 )
 
 type Broadcaster struct {
@@ -32,6 +32,7 @@ var broadcasters = make(map[string]*Broadcaster)
 var lock sync.RWMutex
 
 func connectionDoneCallback(id string, timestamp int64) {
+	log.Printf("Connection: %v %v is over\n", id, timestamp)
 	lock.Lock()
 	if b, ok := broadcasters[id]; ok && b.Timestamp == timestamp {
 		delete(broadcasters, id)
@@ -91,7 +92,7 @@ func join(id string, quality int, videoRequired bool, sdpType int, sdpString str
 	}
 }
 
-func add(id string, tracks [][]string, pdf string, sdpType int, sdpString string) (*webrtc.SessionDescription, int64, error) {
+func add(id string, tracks [][]string, pdf string, sdpString string) (*webrtc.SessionDescription, int64, error) {
 	lock.RLock()
 	_, ok := broadcasters[id]
 	lock.RUnlock()
@@ -102,7 +103,7 @@ func add(id string, tracks [][]string, pdf string, sdpType int, sdpString string
 		return nil, -1, errors.New("pdf file required")
 	}
 	t := time.Now().Unix()
-	if ans, err := rtc.NewPeerConnectionWriter(id, t, tracks, &webrtc.SessionDescription{Type: webrtc.SDPType(sdpType), SDP: sdpString}); err != nil {
+	if ans, err := rtc.NewPeerConnectionWriter(id, t, tracks, &webrtc.SessionDescription{Type: webrtc.SDPTypeOffer, SDP: sdpString}); err != nil {
 		return nil, -1, err
 	} else {
 		// TODO: Put metadata into database.
@@ -126,16 +127,16 @@ func sockHandler(msg *sock.Message, broker chan *sock.Message) (res []*sock.Mess
 	case "add":
 		if u.Teacher {
 			go func() {
-				offer := content["offer"].(map[string]interface{})
+				offer := content["Offer"].(map[string]interface{})
 				var tracks [][]string
-				for _, ts := range content["tracks"].([]interface{}) {
+				for _, ts := range content["Tracks"].([]interface{}) {
 					var nt []string
 					for _, t := range ts.([]interface{}) {
 						nt = append(nt, t.(string))
 					}
 					tracks = append(tracks, nt)
 				}
-				answer, timestamp, err := add(msg.Client.Gid, tracks, offer["pdf"].(string), offer["type"].(int), offer["sdp"].(string))
+				answer, timestamp, err := add(msg.Client.Gid, tracks, content["Pdf"].(string), offer["sdp"].(string))
 				errMessage := ""
 				if err != nil {
 					errMessage = err.Error()

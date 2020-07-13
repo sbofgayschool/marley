@@ -99,21 +99,8 @@ func CountGroupClient(id string) int {
 	return 0
 }
 
-func (c *Client) scheduleSend(content interface{}, broker chan *Message) {
-	if c.output.Len() != 0 {
-		c.lock.Lock()
-		defer c.lock.Unlock()
-		c.output.PushBack(content)
-		if c.output.Len() == 1 {
-			go c.send(content, broker)
-		}
-	} else {
-		c.output.PushBack(content)
-		go c.send(content, broker)
-	}
-}
-
-func (c *Client) send(content interface{}, broker chan *Message) {
+func (c *Client) send(content interface{}, broker chan *Message, counter *sync.WaitGroup) {
+	defer counter.Done()
 	for {
 		if err := c.sock.WriteJSON(content); err != nil {
 			broker <- &Message{operation: OptLeave, Client: c}
@@ -131,7 +118,24 @@ func (c *Client) send(content interface{}, broker chan *Message) {
 	}
 }
 
-func (c *Client) recv(broker chan *Message) {
+func (c *Client) scheduleSend(content interface{}, broker chan *Message, counter *sync.WaitGroup) {
+	if c.output.Len() != 0 {
+		c.lock.Lock()
+		defer c.lock.Unlock()
+		c.output.PushBack(content)
+		if c.output.Len() == 1 {
+			counter.Add(1)
+			go c.send(content, broker, counter)
+		}
+	} else {
+		c.output.PushBack(content)
+		counter.Add(1)
+		go c.send(content, broker, counter)
+	}
+}
+
+func (c *Client) recv(broker chan *Message, counter *sync.WaitGroup) {
+	defer counter.Done()
 	for {
 		content := make(map[string]interface{})
 		if err := c.sock.ReadJSON(&content); err != nil {
@@ -148,37 +152,46 @@ func (c *Client) recv(broker chan *Message) {
 }
 
 func (g *group) brokeMessage() {
+	log.Printf("group %s: broker started\n", g.id)
 	var orphans []*Client
 	closed := false
+	counter := sync.WaitGroup{}
 	for msg := range g.broker {
 		switch msg.operation {
 		case OptMessage:
 			if !closed {
 				if msg.Client == nil {
 					for c := range g.clients {
-						c.scheduleSend(msg.Content, g.broker)
+						c.scheduleSend(msg.Content, g.broker, &counter)
 					}
 				} else if _, ok := g.clients[msg.Client]; ok {
-					msg.Client.scheduleSend(msg.Content, g.broker)
+					msg.Client.scheduleSend(msg.Content, g.broker, &counter)
 				}
 			}
 		case OptJoin:
 			if !closed {
 				if _, ok := g.clients[msg.Client]; !ok {
+					log.Printf("group %s: client %v joined\n", g.id, msg.Client)
 					g.clients[msg.Client] = true
-					go msg.Client.recv(g.broker)
+					counter.Add(1)
+					go msg.Client.recv(g.broker, &counter)
 				}
 			} else {
 				orphans = append(orphans, msg.Client)
 			}
 		case OptLeave:
 			if _, ok := g.clients[msg.Client]; ok {
+				log.Printf("group %s: client %v left\n", g.id, msg.Client)
 				delete(g.clients, msg.Client)
 				if err := msg.Client.sock.Close(); err != nil {
 					log.Println(err)
 				}
 				if len(g.clients) == 0 && !closed {
 					closed = true
+					// Wait for all send & recv go routines, then ask the manager to close the channel.
+					// This can prevent go routines from unexpectedly writing OptLeave message to a closed channel.
+					log.Printf("group %s: closed, waiting for go routines\n", g.id)
+					counter.Wait()
 					go func() { groupsChannel <- &groupOperation{g.id, nil} }()
 				}
 			}
@@ -188,10 +201,10 @@ func (g *group) brokeMessage() {
 				for _, msg := range res {
 					if msg.Client == nil {
 						for c := range g.clients {
-							c.scheduleSend(msg.Content, g.broker)
+							c.scheduleSend(msg.Content, g.broker, &counter)
 						}
 					} else if _, ok := g.clients[msg.Client]; ok {
-						msg.Client.scheduleSend(msg.Content, g.broker)
+						msg.Client.scheduleSend(msg.Content, g.broker, &counter)
 					}
 				}
 			}
@@ -200,4 +213,5 @@ func (g *group) brokeMessage() {
 	for _, o := range orphans {
 		groupsChannel <- &groupOperation{g.id, o}
 	}
+	log.Printf("group %s: broker stopped\n", g.id)
 }

@@ -7,6 +7,7 @@ function RTCStartBroadcast(rawTracks, quality, sp, loadCallback, failedCallback)
     }
     rtcStatus = 1;
     rtcPC = new RTCPeerConnection(null);
+    let readyCount = 0;
     let tracks = [];
     for (let i = 0; i <= quality; i++) {
         if (sp) {
@@ -19,10 +20,15 @@ function RTCStartBroadcast(rawTracks, quality, sp, loadCallback, failedCallback)
         }
     }
     rtcPC.oniceconnectionstatechange = function(e) {
+        console.log("iCE state changed")
         console.log(e);
-        if (rtcPC.iceConnectionState === "connected") {
+    };
+    rtcPC.onconnectionstatechange = function(e) {
+        console.log("connection state changed")
+        console.log(e);
+        if (rtcPC.connectionState === "connected") {
             rtcStatus = 2;
-        } else if (rtcPC.iceConnectionState === "failed" || rtcPC.iceConnectionState === "closed") {
+        } else if (rtcPC.connectionState === "failed" || rtcPC.connectionState === "closed") {
             if (rtcStatus === 0) {
                 return;
             }
@@ -31,16 +37,24 @@ function RTCStartBroadcast(rawTracks, quality, sp, loadCallback, failedCallback)
         }
     };
     rtcPC.onicecandidate = function(event) {
-        console.log(event);
         if (event.candidate === null) {
-            loadCallback(rtcPC.localDescription, tracks);
+            console.log("ice gathered");
+            readyCount++;
+            if (readyCount === 2) {
+                loadCallback(rtcPC.localDescription, tracks);
+            }
         } else {
             console.log(event.candidate);
         }
     };
     rtcPC.createOffer().then(function(sdp) {
-        rtcPC.setLocalDescription(sdp);
-        console.log(sdp);
+        rtcPC.setLocalDescription(sdp).then(function () {
+            console.log("offer set");
+            readyCount++;
+            if (readyCount === 2) {
+                loadCallback(rtcPC.localDescription, tracks);
+            }
+        });
     });
     return true;
 }

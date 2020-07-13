@@ -12,12 +12,13 @@ function SockOpen(id) {
     };
     sock.onmessage = function(e) {
         e = JSON.parse(e.data);
-        console.log(e);
+        // console.log(e);
         if (sockMessageHandler[e[sockTypeField]]) {
             sockMessageHandler[e[sockTypeField]](e);
         }
     };
     sock.onclose = function(e) {
+        sockConnected = false;
         setTimeout(SockOpen, sockRetryInterval, id);
     };
 }

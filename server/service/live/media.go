@@ -32,7 +32,7 @@ var broadcasters = make(map[string]*Broadcaster)
 var lock sync.RWMutex
 
 func connectionDoneCallback(id string, timestamp int64) {
-	log.Printf("Connection: %v %v is over\n", id, timestamp)
+	log.Printf("connection: %v %v is over\n", id, timestamp)
 	lock.Lock()
 	if b, ok := broadcasters[id]; ok && b.Timestamp == timestamp {
 		delete(broadcasters, id)
@@ -45,7 +45,7 @@ func connectionDoneCallback(id string, timestamp int64) {
 }
 
 func trackDoneCallback(id string, timestamp int64, quality int, video bool, filename string) {
-	log.Printf("Track: %v %v %v %v %v is over\n", id, timestamp, quality, video, filename)
+	log.Printf("track: %v %v %v %v %v is over\n", id, timestamp, quality, video, filename)
 	// TODO: Move the handled video to proper position, and put relative data into database.
 }
 

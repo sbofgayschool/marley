@@ -115,7 +115,7 @@
                                 </div>
                             </div>
                             <div class="row">
-                                <button v-on:click="startStop(on == 0)" class="col-2 btn btn-primary" :disabled="on == 1">{{!on ? "start" : "stop"}}</button>
+                                <button v-on:click="switchButton(on == 0)" class="col-2 btn btn-primary" :disabled="on == 1">{{!on ? "start" : "stop"}}</button>
                                 <div class="col-2">
                                     <select v-model="qualities" class="form-control" :disabled="on > 0" v-on:change="switchQuality()">
                                         <option value="0" selected>360p</option>
@@ -160,6 +160,7 @@
                         <!-- /.card-header -->
                         <div class="card-body" style="height: 400px;">
                             <!-- Conversations are loaded here -->
+                            <!-- TODO: Have look at the height of the div -->
                             <div id="divChatMessage" class="direct-chat-messages">
                                 <!-- Message. Default to the left -->
                                 <div v-for="x in messages" class="direct-chat-msg">
@@ -237,13 +238,15 @@
             timestamp: 0
         },
         methods: {
-            startStop: function(status) {
+            switchButton: function(status) {
                 if (status) {
                     if (this.on > 0) {
                         return;
                     }
                     this.on = 1;
-                    if (RTCStartBroadcast(liveTracks, parseInt(this.qualities), this.sp, LiveRTCLoadCallback, function() {liveOption.stop(false);})) {
+                    if (RTCStartBroadcast(liveTracks, parseInt(this.qualities), this.sp, LiveRTCLoadCallback, function() {
+                        liveOption.stop(false);
+                    })) {
                         return;
                     }
                 }
@@ -286,13 +289,15 @@
     }
 
     function LiveRTCLoadCallback(sdp, tracks) {
-        SockSendMessage({
+        if (!SockSendMessage({
             Type: "live",
             Operation: "add",
             Offer: sdp,
             Tracks: tracks,
             Pdf: liveOption.$data.sp ? liveOption.$data.pdf : ""
-        });
+        })) {
+            liveOption.stop(true);
+        }
     }
 
     function LiveOnMessageHandler(msg) {
@@ -303,18 +308,13 @@
             } else {
                 liveOption.start(msg["timestamp"]);
                 console.log(msg["Answer"]);
-                try {
-                    rtcPC.setRemoteDescription(new RTCSessionDescription(msg["Answer"]));
-                    console.log(rtcPC.remoteDescription);
-                } catch (e) {
-                    console.log(e);
-                }
+                rtcPC.setRemoteDescription(new RTCSessionDescription(msg["Answer"]));
             }
         }
     }
 
     $(function() {
-        navigator.mediaDevices.getUserMedia({video: {width: {exact: 1280}, height: {exact: 720}, frameRate: 25}, audio: true}).then(
+        navigator.mediaDevices.getUserMedia({video: {height: {exact: 720}, frameRate: 19}, audio: {sampleSize: 24}}).then(
             function(stream) {
                 liveTracks[2][0] = stream.getAudioTracks()[0];
                 liveTracks[2][1] = stream.getVideoTracks()[0];
@@ -322,14 +322,14 @@
                 LiveChangeVideoSource();
             }
         );
-        navigator.mediaDevices.getUserMedia({video: {width: {exact: 1024}, height: {exact: 576}, frameRate: 20}, audio: true}).then(
+        navigator.mediaDevices.getUserMedia({video: {height: {exact: 576}, frameRate: 17}, audio: {sampleSize: 16}}).then(
             function(stream) {
                 liveTracks[1][0] = stream.getAudioTracks()[0];
                 liveTracks[1][1] = stream.getVideoTracks()[0];
                 liveTracks[1][2] = stream;
             }
         );
-        navigator.mediaDevices.getUserMedia({video: {width: {exact: 640}, height: {exact: 360}, frameRate: 15}, audio: true}).then(
+        navigator.mediaDevices.getUserMedia({video: {height: {exact: 360}, frameRate: 15}, audio: {sampleSize: 8}}).then(
             function(stream) {
                 liveTracks[0][0] = stream.getAudioTracks()[0];
                 liveTracks[0][1] = stream.getVideoTracks()[0];

@@ -17,9 +17,9 @@ const (
 )
 
 var qualityBitrate = [][]uint64{
-	{1e7, 1e7},
-	{1e7, 1e7},
-	{1e7, 1e7},
+	{1e4, 5e5},
+	{2e4, 1e7},
+	{3e4, 5e8},
 }
 
 var lock sync.RWMutex
@@ -66,7 +66,7 @@ func addBroadcaster(id string, quality int, timestamp int64) error {
 	lock.Lock()
 	defer lock.Unlock()
 	if _, ok := broadcasters[id]; ok {
-		return errors.New("")
+		return errors.New("rtc broadcaster exists")
 	}
 	broadcasters[id] = &broadcaster{tracks: make([]*videoAudioTrack, quality), timestamp: timestamp}
 	for i := 0; i < quality; i++ {
@@ -85,7 +85,13 @@ func dropBroadcaster(id string, timestamp int64) {
 
 func setTrack(id string, quality int, video bool, timestamp int64, conn *webrtc.PeerConnection, remoteTrack *webrtc.Track) (*writingTrack, error) {
 	lock.Lock()
-	defer lock.Unlock()
+	b, ok := broadcasters[id]
+	lock.Unlock()
+	if !ok || b.timestamp != timestamp {
+		return nil, errors.New("broken peer connection")
+	} else if len(b.tracks) <= quality {
+		return nil, errors.New("incorrect quality parameter")
+	}
 	label := "audio"
 	if video {
 		label = "video"
@@ -94,20 +100,12 @@ func setTrack(id string, quality int, video bool, timestamp int64, conn *webrtc.
 	if err != nil {
 		return nil, err
 	}
-	b, ok := broadcasters[id]
-	if !ok || b.timestamp != timestamp {
-		return nil, errors.New("broken peer connection")
-	} else if len(b.tracks) <= quality {
-		return nil, errors.New("incorrect quality parameter")
-	}
 	if video {
 		// TODO: Add information for writer and filename, and start the writer
 		b.tracks[quality].video = &writingTrack{track: localTrack}
 		return b.tracks[quality].video, nil
 	}
 	// TODO: Add information for writer and filename, and start the writer
-	log.Println(len(b.tracks))
-	log.Println(id, quality, video)
 	b.tracks[quality].audio = &writingTrack{track: localTrack}
 	return b.tracks[quality].audio, nil
 }
@@ -139,12 +137,11 @@ func NewPeerConnectionWriter(id string, timestamp int64, tracks [][]string, offe
 	if _, err := peerConnection.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio); err != nil {
 		return nil, err
 	}
-	log.Println(tracks)
+	log.Printf("tracks: %v\n", tracks)
 	if err := addBroadcaster(id, len(tracks), timestamp); err != nil {
 		return nil, err
 	}
 	peerConnection.OnTrack(func(remoteTrack *webrtc.Track, receiver *webrtc.RTPReceiver) {
-		log.Println(remoteTrack.ID())
 		var quality, video int
 		for q, t := range tracks {
 			for v, i := range t {
@@ -154,6 +151,7 @@ func NewPeerConnectionWriter(id string, timestamp int64, tracks [][]string, offe
 				}
 			}
 		}
+		log.Printf("track %v loaded: %v %v\n", remoteTrack.ID(), quality, video)
 		localTrack, err := setTrack(id, quality, video == 1, timestamp, peerConnection, remoteTrack)
 		if err != nil {
 			log.Println(err)
@@ -176,8 +174,9 @@ func NewPeerConnectionWriter(id string, timestamp int64, tracks [][]string, offe
 				}
 				if rtcpSendErr := peerConnection.WriteRTCP([]rtcp.Packet{&rtcp.ReceiverEstimatedMaximumBitrate{
 					SenderSSRC: remoteTrack.SSRC(),
-					// Bitrate:    qualityBitrate[quality][video],
-					Bitrate:    1e8,
+					// TODO: Figure out the bitrate.
+					Bitrate:    qualityBitrate[quality][video],
+					// Bitrate: 1e8,
 				}}); rtcpSendErr != nil {
 					log.Println(rtcpSendErr)
 				}
@@ -190,9 +189,10 @@ func NewPeerConnectionWriter(id string, timestamp int64, tracks [][]string, offe
 			}
 			rtp, err := remoteTrack.ReadRTP()
 			if err != nil {
-				log.Println(err)
+				// log.Println(err)
 				continue
 			}
+			// TODO: Write the file
 			/*
 			if err = localTrack.writer.WriteRTP(rtp); err != nil {
 				log.Println(err)
@@ -205,8 +205,21 @@ func NewPeerConnectionWriter(id string, timestamp int64, tracks [][]string, offe
 		}
 	})
 	peerConnection.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
-		log.Println(connectionState)
+		log.Printf("ice connection state changed %v\n", connectionState)
+		/*
 		if connectionState == webrtc.ICEConnectionStateFailed || connectionState == webrtc.ICEConnectionStateClosed {
+			if !stopped {
+				stopped = true
+				_ = peerConnection.Close()
+				dropBroadcaster(id, timestamp)
+				connectionDoneCallback(id, timestamp)
+			}
+		}
+		*/
+	})
+	peerConnection.OnConnectionStateChange(func(connectionState webrtc.PeerConnectionState) {
+		log.Printf("connection state changed %v\n", connectionState)
+		if connectionState == webrtc.PeerConnectionStateFailed || connectionState == webrtc.PeerConnectionStateClosed {
 			if !stopped {
 				stopped = true
 				_ = peerConnection.Close()

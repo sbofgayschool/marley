@@ -37,7 +37,7 @@
         <!-- Brand Logo -->
         <a href="index3.html" class="brand-link">
             <img src="../res/img/marley.jpg" alt="AdminLTE Logo" class="brand-image img-circle elevation-3"
-                     style="opacity: .8">
+                 style="opacity: .8">
             <span class="brand-text font-weight-light">Project Marley</span>
         </a>
         <!-- Sidebar -->
@@ -96,17 +96,31 @@
                 <div class="col-md-8">
                     <div class="card card-default">
                         <div class="card-header">
-                            <h3 class="card-title">Header</h3>
+                            <h3 class="card-title">Video</h3>
+                            <span id="spanAudience" style="float: right">Audience: 0</span>
                         </div>
-                        <div class="card-body">
-                            <video style="width: 100%; height: 400px;"></video>
-                            <canvas style="width: 100%; height: 400px;" hidden></canvas>
+                        <div class="card-body" style="padding: 0;">
+                            <video id="video" poster="../res/img/marley-map.jpg" style="width: 100%; background: #000000;" height="400" autoplay muted></video>
+                            <canvas id="canvas" style="width: 100%; height: 400px;" hidden></canvas>
+                            <audio id="audio" autoplay hidden></audio>
+                        </div>
+                        <div id="divLiveOption" class="card-footer">
+                            <div class="row">
+                                <div class="col-1">
+                                    <label>Quality</label>
+                                </div>
+                                <div class="col-3">
+                                    <select v-model="quality" class="form-control" v-on:change="stop(true)">
+                                        <option v-for="x in qualities" v-bind:value="x.val">{{x.tag}}</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <!-- DIRECT CHAT PRIMARY -->
-                    <div id="divChat" class="card card-prirary cardutline direct-chat">
+                    <div id="divChat" class="card cardutline direct-chat">
                         <div class="card-header">
                             <h3 class="card-title">Direct Chat</h3>
                             <span style="float: right">
@@ -115,14 +129,14 @@
                             </span>
                         </div>
                         <!-- /.card-header -->
-                        <div class="card-body" style="height: 400px;">
+                        <div class="card-body">
                             <!-- Conversations are loaded here -->
-                            <div id="divChatMessage" class="direct-chat-messages">
+                            <div id="divChatMessage" class="direct-chat-messages" style="height: 400px">
                                 <!-- Message. Default to the left -->
                                 <div v-for="x in messages" class="direct-chat-msg">
                                     <div class="direct-chat-infos clearfix">
                                         <span class="direct-chat-name float-left">{{x.Username}}</span>
-                                        <span class="direct-chat-timestamp float-right">{{x.Timestamp}}</span>
+                                        <span class="direct-chat-timestamp float-right">{{x.DisplayTime}}</span>
                                     </div>
                                     <!-- /.direct-chat-infos -->
                                     <div class="direct-chat-text">
@@ -140,7 +154,7 @@
                             <div class="input-group">
                                 <input v-model="newMessage.Message" type="text" placeholder="Type Message ..." class="form-control">
                                 <span class="input-group-append">
-                                    <button v-on:click="SendMessage"  class="btn btn-primary">Send</button>
+                                    <button v-on:click="SendMessage" class="btn btn-primary">Send</button>
                                 </span>
                             </div>
                         </div>
@@ -178,59 +192,159 @@
 <script src="../res/plugins/vue/vue.js"></script>
 
 <script src="../res/js/common.js"></script>
-<script src="../res/js/sock.js"></script>
+<script src="../res/js/infra/sock.js"></script>
+<script src="../res/js/infra/rtc.js"></script>
+<script src="../res/js/service/chat.js"></script>
 
 <!-- Page specified script -->
 <script type="application/javascript">
-    let chat = new Vue({
-        el: "#divChat",
+    let allQualities = [
+        {val: "0", tag: "low quality audio"},
+        {val: "1", tag: "medium quality audio"},
+        {val: "2", tag: "high quality audio"},
+        {val: "3", tag: "144p"},
+        {val: "4", tag: "360p"},
+        {val: "5", tag: "576p"}
+    ];
+    let liveOption = new Vue({
+        el: "#divLiveOption",
         data: {
-            scrollToEnd: true,
-            messages: [],
-            newMessage: {
-                Message: "",
-                MsgType: "text"
-            }
+            on: 0,
+            quality: "5",
+            qualities: allQualities,
+            pdf: "",
+            timestamp: 0
         },
         methods: {
-            SendMessage: function(e) {
-                if (!this.newMessage.Message) {
+            ready: function(qualities, pdf) {
+                if (this.on > 0) {
                     return;
                 }
-                SendChatMessage(this.newMessage);
-                this.newMessage.Message = "";
-            }
-        },
-        watch: {
-            messages: function () {
-                this.$nextTick(function() {
-                    if (!this.scrollToEnd) {
-                        return;
+                this.on = 1;
+                this.pdf = pdf;
+                this.qualities = allQualities.slice(0, qualities);
+                if (pdf === "") {
+                    this.qualities.push(...allQualities.slice(3, 3 + qualities));
+                }
+                let found = false;
+                for (let i = 0; i < this.qualities.length; i++) {
+                    if (this.qualities[i].val === this.quality) {
+                        found = true;
+                        break;
                     }
-                    let divChatMessage = $("#divChatMessage");
-                    divChatMessage.scrollTop(divChatMessage[0].scrollHeight);
-                });
+                }
+                if (!found) {
+                    this.quality = this.qualities[this.qualities.length - 1].val;
+                }
+                if (RTCStart(false, null, null, pdf !== "", LiveRTCLoadCallback, LiveRTCFailedCallback, LiveRTCTrackCallback)) {
+                    return;
+                }
+            },
+            start: function(timestamp) {
+                if (this.on === 2) {
+                    return;
+                }
+                this.on = 2;
+                this.timestamp = timestamp;
+            },
+            stop: function(invoke) {
+                if (this.on === 0) {
+                    return;
+                }
+                this.on = 0;
+                this.qualities= allQualities;
+                this.tracks = [];
+                this.timestamp = 0;
+                if (this.pdf) {
+                    SpLiveStop();
+                }
+                this.pdf = "";
+                $("#audio")[0].srcObject = null;
+                $("#audio")[0].autoplay = false;
+                $("#video")[0].srcObject = null;
+                $("#video")[0].autoplay = false;
+                if (invoke) {
+                    RTCStopConnection();
+                }
             }
         }
     });
-    function OnOpen(e) {
-        console.log("sock: connected")
+
+    let liveType = "live";
+
+    function LiveRTCLoadCallback(sdp) {
+        let quality = parseInt(liveOption.$data.quality);
+        console.log({
+            Type: "live",
+            Operation: "join",
+            Offer: sdp,
+            Quality: quality % 3,
+            VideoRequired: quality >= 3
+        });
+        if (!SockSendMessage({
+            Type: "live",
+            Operation: "join",
+            Offer: sdp,
+            Quality: quality % 3,
+            VideoRequired: quality >= 3
+        })) {
+            liveOption.stop(true);
+        }
     }
-    function OnMessage(e) {
-        console.log(e);
-        chat.$data.messages.push(JSON.parse(e.data))
+
+    function LiveRTCFailedCallback() {
+        liveOption.stop(false);
     }
-    function OnClose(e) {
-        console.log("sock: closed")
+
+    function LiveRTCTrackCallback(e) {
+        let strm = e.streams[0];
+        console.log(strm);
+        if (strm.id === "audio") {
+            $("#audio")[0].srcObject = strm;
+            $("#audio")[0].autoplay = true;
+        } else if (strm.id === "video") {
+            $("#video")[0].srcObject = strm;
+            $("#video")[0].autoplay = true;
+        }
     }
-    function SendChatMessage(msg) {
-        let newMessage = msg;
-        newMessage["Type"] = "chat";
-        newMessage["Operation"] = "message";
-        SockSendMessage(newMessage);
+
+    function LiveOnMessageHandler(msg) {
+        console.log(msg);
+        if (msg["Operation"] === "check") {
+            if (liveOption.$data.timestamp === 0 && msg["Broadcaster"]) {
+                liveOption.ready(msg["Broadcaster"]["Qualities"], msg["Broadcaster"]["Pdf"]);
+            } else if (liveOption.$data.timestamp !== 0 && (!msg["Broadcaster"] || msg["Broadcaster"]["Timestamp"] !== liveOption.$data.timestamp)) {
+                liveOption.stop(true);
+            }
+        } else if (msg["Operation"] === "join") {
+            if (msg["Error"]) {
+                console.log(msg["Error"]);
+                liveOption.stop(true);
+            } else {
+                liveOption.start(msg["Timestamp"]);
+                rtcPC.setRemoteDescription(new RTCSessionDescription(msg["Answer"]));
+                SockSendMessage({"Type": liveType, "Operation": "fetch"})
+            }
+        } else if (msg["Operation"] === "fetch") {
+            if (msg["Error"]) {
+                console.log(msg["Error"]);
+                return;
+            }
+            ChatLoadMessage(msg["Chats"]);
+            if (msg["Broadcaster"]["Timestamp"] === liveOption.$data.timestamp && liveOption.$data.pdf) {
+                SpLiveStart(liveOption.$data.pdf, msg["Broadcaster"]["Operations"]);
+            }
+        } else if (msg["Operation"] === "opt") {
+            // TODO: Deal with opts.
+        }
     }
-    $(() => {
-        SockOpen("1", OnOpen, OnMessage, OnClose);
+
+    let liveCheckInterval = 5000;
+
+    $(function() {
+        sockMessageHandler[liveType] = LiveOnMessageHandler;
+        SockOpen("1");
+        setInterval(SockSendMessage, liveCheckInterval, {"Type": liveType, "Operation": "check"});
     });
 </script>
 </body>

@@ -115,12 +115,12 @@
                                 </div>
                             </div>
                             <div class="row">
-                                <button v-on:click="switchButton(on == 0)" class="col-2 btn btn-primary" :disabled="on == 1">{{!on ? "start" : "stop"}}</button>
+                                <button v-on:click="switchButton(on == 0)" class="col-2 btn btn-primary" :disabled="on == 1">{{!on ? "Start" : "Stop"}}</button>
                                 <div class="col-2">
                                     <select v-model="qualities" class="form-control" :disabled="on > 0" v-on:change="switchQuality()">
-                                        <option value="0" selected>360p</option>
-                                        <option value="1" selected>360p & 576p</option>
-                                        <option value="2" selected>360p & 576p & 720p</option>
+                                        <option value="0">144p</option>
+                                        <option value="1">144p & 360p</option>
+                                        <option value="2">144p & 360p & 576p</option>
                                     </select>
                                 </div>
                                 <button v-on:click="switchSp()" class="col-2 btn btn-primary" :disabled="on > 0">{{!sp ? "Special" : "Normal"}}</button>
@@ -141,9 +141,11 @@
                             <h3 class="card-title">Video</h3>
                             <span id="spanAudience" style="float: right">Audience: 0</span>
                         </div>
-                        <div class="card-body">
-                            <video id="video" style="width: 100%;" height="400" autoplay muted></video>
+                        <div class="card-body" style="padding: 0;">
+                            <video id="video" style="width: 100%; background: #000000;" height="400" autoplay muted></video>
                             <canvas id="canvas" style="width: 100%; height: 400px;" hidden></canvas>
+                        </div>
+                        <div class="card-footer">
                         </div>
                     </div>
                 </div>
@@ -158,15 +160,14 @@
                             </span>
                         </div>
                         <!-- /.card-header -->
-                        <div class="card-body" style="height: 400px;">
+                        <div class="card-body">
                             <!-- Conversations are loaded here -->
-                            <!-- TODO: Have look at the height of the div -->
-                            <div id="divChatMessage" class="direct-chat-messages">
+                            <div id="divChatMessage" class="direct-chat-messages" style="height: 400px;">
                                 <!-- Message. Default to the left -->
                                 <div v-for="x in messages" class="direct-chat-msg">
                                     <div class="direct-chat-infos clearfix">
                                         <span class="direct-chat-name float-left">{{x.Username}}</span>
-                                        <span class="direct-chat-timestamp float-right">{{x.ElapsedTime}}</span>
+                                        <span class="direct-chat-timestamp float-right">{{x.DisplayTime}}</span>
                                     </div>
                                     <!-- /.direct-chat-infos -->
                                     <div class="direct-chat-text">
@@ -240,13 +241,14 @@
         methods: {
             switchButton: function(status) {
                 if (status) {
+                    if (this.sp && this.pdf === "") {
+                        return
+                    }
                     if (this.on > 0) {
                         return;
                     }
                     this.on = 1;
-                    if (RTCStartBroadcast(liveTracks, parseInt(this.qualities), this.sp, LiveRTCLoadCallback, function() {
-                        liveOption.stop(false);
-                    })) {
+                    if (RTCStart(true, liveTracks, parseInt(this.qualities), this.sp, LiveRTCLoadCallback, LiveRTCFailedCallback)) {
                         return;
                     }
                 }
@@ -260,16 +262,17 @@
                 this.timestamp = timestamp;
             },
             stop: function(invoke) {
-                if (invoke) {
-                    RTCStopConnection();
-                }
                 if (this.on === 0) {
                     return;
                 }
                 this.on = 0;
+                this.timestamp = 0;
+                if (invoke) {
+                    RTCStopConnection();
+                }
             },
             switchQuality: function() {
-                LiveChangeVideoSource();
+                $("#video")[0].srcObject = liveTracks[parseInt(liveOption.$data.qualities)][2];
             },
             switchSp: function() {
                 this.sp = !this.sp;
@@ -280,13 +283,6 @@
     let liveType = "live";
 
     let liveTracks = [[null, null, null], [null, null, null], [null, null, null]];
-
-    function LiveChangeVideoSource() {
-        if (liveOption.$data.sp) {
-            return;
-        }
-        $("#video")[0].srcObject = liveTracks[parseInt(liveOption.$data.qualities)][2];
-    }
 
     function LiveRTCLoadCallback(sdp, tracks) {
         if (!SockSendMessage({
@@ -300,13 +296,17 @@
         }
     }
 
+    function LiveRTCFailedCallback() {
+        liveOption.stop(false);
+    }
+
     function LiveOnMessageHandler(msg) {
         if (msg["Operation"] === "add") {
             if (msg["Error"]) {
                 console.log(msg["Error"]);
                 liveOption.stop(true);
             } else {
-                liveOption.start(msg["timestamp"]);
+                liveOption.start(msg["Timestamp"]);
                 console.log(msg["Answer"]);
                 rtcPC.setRemoteDescription(new RTCSessionDescription(msg["Answer"]));
             }
@@ -314,22 +314,22 @@
     }
 
     $(function() {
-        navigator.mediaDevices.getUserMedia({video: {height: {exact: 720}, frameRate: 19}, audio: {sampleSize: 24}}).then(
+        navigator.mediaDevices.getUserMedia({video: {height: 576, frameRate: 19}, audio: {sampleSize: 24}}).then(
             function(stream) {
                 liveTracks[2][0] = stream.getAudioTracks()[0];
                 liveTracks[2][1] = stream.getVideoTracks()[0];
                 liveTracks[2][2] = stream;
-                LiveChangeVideoSource();
+                $("#video")[0].srcObject = stream;
             }
         );
-        navigator.mediaDevices.getUserMedia({video: {height: {exact: 576}, frameRate: 17}, audio: {sampleSize: 16}}).then(
+        navigator.mediaDevices.getUserMedia({video: {height: 360, frameRate: 17}, audio: {sampleSize: 16}}).then(
             function(stream) {
                 liveTracks[1][0] = stream.getAudioTracks()[0];
                 liveTracks[1][1] = stream.getVideoTracks()[0];
                 liveTracks[1][2] = stream;
             }
         );
-        navigator.mediaDevices.getUserMedia({video: {height: {exact: 360}, frameRate: 15}, audio: {sampleSize: 8}}).then(
+        navigator.mediaDevices.getUserMedia({video: {height: 144, frameRate: 15}, audio: {sampleSize: 8}}).then(
             function(stream) {
                 liveTracks[0][0] = stream.getAudioTracks()[0];
                 liveTracks[0][1] = stream.getVideoTracks()[0];

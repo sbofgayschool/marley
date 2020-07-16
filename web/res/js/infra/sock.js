@@ -5,7 +5,7 @@ let sockRetryInterval = 2000;
 let sockMessageHandler = {};
 let sockTypeField = "Type";
 
-function SockOpen(id) {
+function SockOpen(id, onCloseCallback) {
     sock = new WebSocket(sockUrl + id);
     sock.onopen = function(e) {
         sockConnected = true;
@@ -19,7 +19,10 @@ function SockOpen(id) {
     };
     sock.onclose = function(e) {
         sockConnected = false;
-        setTimeout(SockOpen, sockRetryInterval, id);
+        if (onCloseCallback) {
+            onCloseCallback();
+        }
+        setTimeout(SockOpen, sockRetryInterval, id, onCloseCallback);
     };
 }
 

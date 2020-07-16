@@ -75,7 +75,7 @@ func check(id string) *Broadcaster {
 	}
 }
 
-func join(id string, quality int, videoRequired bool, sdpType int, sdpString string) (*webrtc.SessionDescription, int64, error) {
+func join(id string, quality int, videoRequired bool, sdpString string) (*webrtc.SessionDescription, int64, error) {
 	var timestamp int64 = -1
 	lock.RLock()
 	if b, ok := broadcasters[id]; ok {
@@ -85,7 +85,7 @@ func join(id string, quality int, videoRequired bool, sdpType int, sdpString str
 	if timestamp == -1 {
 		return nil, -1, errors.New("no broadcaster")
 	}
-	if ans, err := rtc.NewPeerConnectionReader(id, quality, videoRequired, &webrtc.SessionDescription{Type: webrtc.SDPType(sdpType), SDP: sdpString}); err != nil {
+	if ans, err := rtc.NewPeerConnectionReader(id, quality, videoRequired, &webrtc.SessionDescription{Type: webrtc.SDPTypeOffer, SDP: sdpString}); err != nil {
 		return nil, -1, err
 	} else {
 		return ans, timestamp, nil
@@ -160,8 +160,8 @@ func sockHandler(msg *sock.Message, broker chan *sock.Message) (res []*sock.Mess
 		}
 	case "join":
 		go func() {
-			offer := content["offer"].(map[string]interface{})
-			if answer, t, err := join(msg.Client.Gid, content["Quality"].(int), content["VideoRequired"].(bool), offer["type"].(int), offer["sdp"].(string)); err != nil {
+			offer := content["Offer"].(map[string]interface{})
+			if answer, t, err := join(msg.Client.Gid, int(content["Quality"].(float64)), content["VideoRequired"].(bool), offer["sdp"].(string)); err != nil {
 				broker <- &sock.Message{Client: msg.Client, Content: map[string]interface{}{
 					sock.TagField:  Tag,
 					OperationField: "join",
@@ -200,7 +200,7 @@ func sockHandler(msg *sock.Message, broker chan *sock.Message) (res []*sock.Mess
 			res = append(res, &sock.Message{Client: msg.Client, Content: map[string]interface{}{
 				sock.TagField:  Tag,
 				OperationField: "fetch",
-				"Timestamp":    -1,
+				"Timestamp":    b.Timestamp,
 				"Operations":   fetchOperations(b),
 				"Chats":        b.chats,
 				"Error":        "",

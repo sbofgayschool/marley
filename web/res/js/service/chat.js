@@ -33,13 +33,31 @@ let chat = new Vue({
     }
 });
 
+function ChatLoadMessage(messages) {
+    console.log(messages)
+    if (!messages || messages.length === 0 || (chat.$data.messages.length > 0 && chat.$data.messages[0].ElapsedTime < messages[0].ElapsedTime)) {
+        return;
+    }
+    chat.$data.messages = [];
+    for (let i in messages) {
+        chat.$data.messages.push({
+            Username: messages[i]["Username"],
+            MsgType: messages[i]["MsgType"],
+            Message: messages[i]["Message"],
+            ElapsedTime: messages[i]["ElapsedTime"],
+            DisplayTime: new Date(messages[i]["ElapsedTime"] * 1000).toUTCString()
+        });
+    }
+}
+
 function ChatOnMessageHandler(msg) {
     if (msg["Operation"] === "message") {
         chat.$data.messages.push({
             Username: msg["Username"],
             MsgType: msg["MsgType"],
             Message: msg["Message"],
-            ElapsedTime: new Date(msg["ElapsedTime"] * 1000).toUTCString()
+            ElapsedTime: msg["ElapsedTime"],
+            DisplayTime: new Date(msg["ElapsedTime"] * 1000).toUTCString()
         })
     } else if (msg["Operation"] === "numQuery") {
         $("#spanAudience").text("Audience: " + msg["Num"])
@@ -55,10 +73,6 @@ function ChatSendMessage(msg) {
     SockSendMessage(newMessage);
 }
 
-function ChatSendNumQuery() {
-    SockSendMessage({"Type": chatType, "Operation": "numQuery"});
-}
-
 $(function() {
-    setInterval(ChatSendNumQuery, chatNumQueryInterval);
-})
+    setInterval(SockSendMessage, chatNumQueryInterval, {"Type": chatType, "Operation": "numQuery"});
+});

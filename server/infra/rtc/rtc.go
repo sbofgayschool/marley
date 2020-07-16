@@ -119,7 +119,13 @@ func getTrack(id string, quality int, video bool) (*webrtc.Track, error) {
 		return nil, errors.New("no track")
 	} else {
 		if video {
+			if b.tracks[quality].video == nil {
+				return nil, errors.New("currently no track")
+			}
 			return b.tracks[quality].video.track, nil
+		}
+		if b.tracks[quality].audio == nil {
+			return nil, errors.New("currently no track")
 		}
 		return b.tracks[quality].audio.track, nil
 	}
@@ -192,7 +198,6 @@ func NewPeerConnectionWriter(id string, timestamp int64, tracks [][]string, offe
 				// log.Println(err)
 				continue
 			}
-			// TODO: Write the file
 			/*
 			if err = localTrack.writer.WriteRTP(rtp); err != nil {
 				log.Println(err)
@@ -202,23 +207,11 @@ func NewPeerConnectionWriter(id string, timestamp int64, tracks [][]string, offe
 			if err = localTrack.track.WriteRTP(rtp); err != nil && err != io.ErrClosedPipe {
 				log.Println(err)
 			}
+			// TODO: Write the file
 		}
-	})
-	peerConnection.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
-		log.Printf("ice connection state changed %v\n", connectionState)
-		/*
-		if connectionState == webrtc.ICEConnectionStateFailed || connectionState == webrtc.ICEConnectionStateClosed {
-			if !stopped {
-				stopped = true
-				_ = peerConnection.Close()
-				dropBroadcaster(id, timestamp)
-				connectionDoneCallback(id, timestamp)
-			}
-		}
-		*/
 	})
 	peerConnection.OnConnectionStateChange(func(connectionState webrtc.PeerConnectionState) {
-		log.Printf("connection state changed %v\n", connectionState)
+		log.Printf("writer %s: connection state changed %v\n", id, connectionState)
 		if connectionState == webrtc.PeerConnectionStateFailed || connectionState == webrtc.PeerConnectionStateClosed {
 			if !stopped {
 				stopped = true
@@ -245,6 +238,7 @@ func NewPeerConnectionWriter(id string, timestamp int64, tracks [][]string, offe
 }
 
 func NewPeerConnectionReader(id string, quality int, videoRequired bool, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
+	stopped := false
 	peerConnection, err := api.NewPeerConnection(config)
 	if err != nil {
 		return nil, err
@@ -264,7 +258,14 @@ func NewPeerConnectionReader(id string, quality int, videoRequired bool, offer *
 			return nil, err
 		}
 	}
-	peerConnection.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
+	peerConnection.OnConnectionStateChange(func(connectionState webrtc.PeerConnectionState) {
+		log.Printf("reader %s: connection state changed %v\n", id, connectionState)
+		if connectionState == webrtc.PeerConnectionStateFailed || connectionState == webrtc.PeerConnectionStateClosed {
+			if !stopped {
+				stopped = true
+				_ = peerConnection.Close()
+			}
+		}
 	})
 	if err := peerConnection.SetRemoteDescription(*offer); err != nil {
 		return nil, err

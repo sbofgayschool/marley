@@ -125,7 +125,7 @@
                                 </div>
                                 <button v-on:click="switchSp()" class="col-2 btn btn-primary" :disabled="on > 0">{{!sp ? "Special" : "Normal"}}</button>
                                 <div class="col-1"></div>
-                                <button v-if="sp" class="col-1 btn btn-primary" :disabled="on > 0">Upload</button>
+                                <button v-if="sp" class="col-1 btn btn-primary" :disabled="on > 0" data-toggle="modal" data-target="#dlgUpload">Upload</button>
                                 <div v-if="sp" class="col-4">
                                     <span>{{pdf}}</span>
                                 </div>
@@ -141,9 +141,11 @@
                             <h3 class="card-title">Video</h3>
                             <span id="spanAudience" style="float: right">Audience: 0</span>
                         </div>
-                        <div class="card-body" style="padding: 0;">
-                            <video id="video" style="width: 100%; background: #000000;" height="400" autoplay muted></video>
-                            <canvas id="canvas" style="width: 100%; height: 400px;" hidden></canvas>
+                        <div id="divCanvasBody" class="card-body" style="padding: 0;">
+                            <video id="video" poster="../res/img/marley-map.jpg" height="400" style="width: 100%; background: #000000;" autoplay muted></video>
+                            <canvas id="canvasPdf" style="position: absolute; z-index: 1; display: none;"></canvas>
+                            <canvas id="canvasOpt" style="position: absolute; z-index: 2; display: none;"></canvas>
+                            <canvas id="canvasBg" height="400" style="display: none;"></canvas>
                         </div>
                         <div class="card-footer">
                         </div>
@@ -213,6 +215,28 @@
     <!-- /.control-sidebar -->
 </div>
 <!-- ./wrapper -->
+<div id="dlgUpload" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Default Modal</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary">Save changes</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal -->
 <!-- jQuery -->
 <script src="../res/plugins/jquery/jquery.min.js"></script>
 <!-- Bootstrap 4 -->
@@ -226,6 +250,7 @@
 <script src="../res/js/infra/sock.js"></script>
 <script src="../res/js/infra/rtc.js"></script>
 <script src="../res/js/service/chat.js"></script>
+<script src="../res/js/service/sp.js"></script>
 
 <!-- Page specified script -->
 <script type="application/javascript">
@@ -276,6 +301,17 @@
             },
             switchSp: function() {
                 this.sp = !this.sp;
+                if (this.sp) {
+                    $("#video").hide();
+                    $("#canvasPdf").show();
+                    $("#canvasOpt").show();
+                    $("#canvasBg").show();
+                } else {
+                    $("#video").show();
+                    $("#canvasPdf").hide();
+                    $("#canvasOpt").hide();
+                    $("#canvasBg").hide();
+                }
             }
         }
     });

@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	FileUploadDir = "res/file/sp/"
+	FileUploadDir = "web/res/file/"
 )
 
 func RegisterHandler(engine *gin.Engine) {
@@ -27,7 +27,7 @@ func UpgradeHandler(c *gin.Context) {
 func UploadFileHandler(c *gin.Context) {
 	file, _ := c.FormFile("file")
 	names := strings.Split(file.Filename, ".")
-	filename := utils.RandomString() + names[len(names) - 1]
+	filename := utils.RandomString() + "." + names[len(names) - 1]
 	_ = c.SaveUploadedFile(file, FileUploadDir + filename)
-	c.JSON(200, gin.H{"file": filename, "type": "pdf"})
+	c.JSON(200, gin.H{"File": filename, "Type": "pdf"})
 }

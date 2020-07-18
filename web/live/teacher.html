@@ -219,17 +219,19 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h4 class="modal-title">Default Modal</h4>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <h4 class="modal-title">Pdf Upload</h4>
+                <button type="button" class="close" onclick="LiveUploadPdf(false)" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body">
-                <p>One fine body&hellip;</p>
+                <form id="formPdf">
+                    <input id="inputPdf" type="file" name="file">
+                </form>
             </div>
             <div class="modal-footer justify-content-between">
-                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary">Save changes</button>
+                <button type="button" class="btn btn-default" onclick="LiveUploadPdf(false)">Close</button>
+                <button type="button" class="btn btn-primary" onclick="LiveUploadPdf(true)">Upload</button>
             </div>
         </div>
         <!-- /.modal-content -->
@@ -245,6 +247,10 @@
 <script src="../res/plugins/adminlte/js/adminlte.js"></script>
 <!-- Vue -->
 <script src="../res/plugins/vue/vue.js"></script>
+<script src="../res/plugins/pdf/pdf.js"></script>
+<script type="application/javascript">
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '../res/plugins/pdf/pdf.worker.js';
+</script>
 
 <script src="../res/js/common.js"></script>
 <script src="../res/js/infra/sock.js"></script>
@@ -254,6 +260,10 @@
 
 <!-- Page specified script -->
 <script type="application/javascript">
+    let liveType = "live";
+
+    let liveTracks = [[null, null, null], [null, null, null], [null, null, null]];
+
     let liveOption = new Vue({
         el: "#divLiveOption",
         data: {
@@ -285,6 +295,9 @@
                 }
                 this.on = 2;
                 this.timestamp = timestamp;
+                if (liveOption.sp) {
+                    SpStart(FileUrl(liveOption.pdf), [], true);
+                }
             },
             stop: function(invoke) {
                 if (this.on === 0) {
@@ -294,6 +307,9 @@
                 this.timestamp = 0;
                 if (invoke) {
                     RTCStopConnection();
+                }
+                if (liveOption.sp) {
+                    SpStop();
                 }
             },
             switchQuality: function() {
@@ -315,10 +331,6 @@
             }
         }
     });
-
-    let liveType = "live";
-
-    let liveTracks = [[null, null, null], [null, null, null], [null, null, null]];
 
     function LiveRTCLoadCallback(sdp, tracks) {
         if (!SockSendMessage({
@@ -343,10 +355,23 @@
                 liveOption.stop(true);
             } else {
                 liveOption.start(msg["Timestamp"]);
-                console.log(msg["Answer"]);
                 rtcPC.setRemoteDescription(new RTCSessionDescription(msg["Answer"]));
             }
         }
+    }
+
+    function LiveUploadPdf(confirm) {
+        if (!confirm) {
+            $("#inputPdf").val("");
+            $("#dlgUpload").modal("hide");
+            return;
+        }
+        Ajax(Api("file"), null, new FormData($("#formPdf")[0]), "POST", function(data) {
+            console.log(data);
+            liveOption.$data.pdf = data["File"];
+            $("#inputPdf").val("");
+            $("#dlgUpload").modal("hide");
+        }, null, false);
     }
 
     $(function() {

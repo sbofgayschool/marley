@@ -344,7 +344,7 @@
             }
             ChatLoadMessage(msg["Chats"]);
             if (msg["Broadcaster"]["Timestamp"] === liveOption.$data.timestamp && liveOption.$data.pdf) {
-                SpLiveStart(liveOption.$data.pdf, msg["Broadcaster"]["Operations"]);
+                SpStart(liveOption.$data.pdf, msg["Broadcaster"]["Operations"], false);
             }
         } else if (msg["Operation"] === "opt") {
             // TODO: Deal with opts.

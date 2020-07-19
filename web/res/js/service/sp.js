@@ -10,6 +10,7 @@ let spOpts = [];
 let spPageOpts = [];
 let spCurPage = -1;
 let spPdfObject = null;
+let spPdfDrawingPage = -1;
 
 let spBroadcastPrevCoord = null;
 let spBroadcastPrevTime = null;
@@ -94,11 +95,38 @@ function SpDrawPdf(page) {
     if (!spStartTime || !spPdfObject) {
         return;
     }
-    spPdfObject.getPage(page + 1).then(function(p) {
-        let scale = Math.min((spCanvasPdf.width / p.view[2]), (spCanvasPdf.height / p.view[3]));
-        let viewport = p.getViewport({scale: scale});
-        p.render({canvasContext: spContextPdf, viewport: viewport});
-    });
+    if (spPdfDrawingPage === -1) {
+        spPdfDrawingPage = page;
+        console.log("Page Started:", page, spPdfDrawingPage);
+        function draw() {
+            console.log("Loading Page:", page, spPdfDrawingPage);
+            spPdfObject.getPage(page + 1).then(function(p) {
+                console.log("Page Loaded:", page, spPdfDrawingPage);
+                if (page !== spPdfDrawingPage) {
+                    page = spPdfDrawingPage;
+                    draw();
+                } else {
+                    let scale = Math.min((spCanvasPdf.width / p.view[2]), (spCanvasPdf.height / p.view[3]));
+                    let viewport = p.getViewport({scale: scale});
+                    console.log("Drawing Page:", page, spPdfDrawingPage);
+                    p.render({canvasContext: spContextPdf, viewport: viewport}).promise.then(function () {
+                        console.log("Page Drawn:", page, spPdfDrawingPage);
+                        if (page !== spPdfDrawingPage) {
+                            page = spPdfDrawingPage;
+                            draw();
+                        } else {
+                            spPdfDrawingPage = -1;
+                            console.log("Page Stopped:", page, spPdfDrawingPage);
+                        }
+                    });
+                }
+            });
+        }
+        draw();
+    } else {
+        spPdfDrawingPage = page;
+        console.log("Page Scheduled:", page, spPdfDrawingPage);
+    }
 }
 
 function SpDrawLine(start, end) {

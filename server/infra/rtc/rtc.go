@@ -2,13 +2,18 @@ package rtc
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"log"
+	"os/exec"
 	"sync"
 	"time"
 
 	"github.com/pion/rtcp"
 	"github.com/pion/webrtc/v3"
+	"github.com/pion/webrtc/v3/pkg/media"
+	"github.com/pion/webrtc/v3/pkg/media/oggwriter"
+
 	"github.com/sbofgayschool/marley/server/utils"
 )
 
@@ -18,8 +23,12 @@ const (
 	tempDir  = "temp/"
 	mediaDir = "web/res/media/"
 
-	videoClockRate = 90000
+	videoClockRate  = 90000
 	audioSampleRate = 48000
+
+	ffmpegBin       = "ffmpeg.exe"
+	ffmpegThread    = "-threads"
+	ffmpegThreadNum = "5"
 )
 
 var qualityBitrate = []uint64{1e4, 5e5, 1e7, 5e8}
@@ -52,13 +61,12 @@ func init() {
 
 type writingTrack struct {
 	track    *webrtc.Track
-	writer   *utils.WebmSaver
+	writer   media.Writer
 	filename string
 }
 
 type broadcaster struct {
 	timestamp int64
-	unreadyTrack sync.WaitGroup
 	tracks    []*writingTrack
 }
 
@@ -69,7 +77,6 @@ func addBroadcaster(id string, quality int, timestamp int64) error {
 		return errors.New("rtc broadcaster exists")
 	}
 	broadcasters[id] = &broadcaster{tracks: make([]*writingTrack, quality), timestamp: timestamp}
-	broadcasters[id].unreadyTrack.Add(quality)
 	return nil
 }
 
@@ -81,13 +88,10 @@ func dropBroadcaster(id string, timestamp int64) {
 	}
 }
 
-func setTrack(id string, quality int, timestamp int64, conn *webrtc.PeerConnection, remoteTrack *webrtc.Track) ([]*writingTrack, error) {
+func setTrack(id string, quality int, timestamp int64, conn *webrtc.PeerConnection, remoteTrack *webrtc.Track) (*writingTrack, error) {
 	lock.Lock()
 	b, ok := broadcasters[id]
 	lock.Unlock()
-	if quality > 0 {
-		defer b.unreadyTrack.Done()
-	}
 	if !ok || b.timestamp != timestamp {
 		return nil, errors.New("broken peer connection")
 	} else if len(b.tracks) <= quality {
@@ -102,21 +106,15 @@ func setTrack(id string, quality int, timestamp int64, conn *webrtc.PeerConnecti
 		return nil, err
 	}
 	if quality > 0 {
-		// writer := utils.NewWebmSaver(tempDir+remoteTrack.ID()+".webm", qualityResolution[quality][0], qualityResolution[quality][1])
-		b.tracks[quality] = &writingTrack{track: localTrack, writer: nil, filename: remoteTrack.ID() + ".webm"}
-		return []*writingTrack{b.tracks[quality]}, nil
+		name := tempDir + utils.RandomString() + ".ivf"
+		writer, _ := utils.NewIVFWriter(name, qualityResolution[quality][0], qualityResolution[quality][1])
+		b.tracks[quality] = &writingTrack{track: localTrack, writer: writer, filename: name}
+		return b.tracks[quality], nil
 	}
-	// writer := utils.NewWebmSaver(tempDir+remoteTrack.ID()+".webm", 0, 0)
-	b.tracks[quality] = &writingTrack{track: localTrack, writer: nil, filename: remoteTrack.ID() + ".webm"}
-	b.unreadyTrack.Done()
-	b.unreadyTrack.Wait()
-	var res []*writingTrack
-	for _, t := range b.tracks {
-		if t != nil {
-			res = append(res, t)
-		}
-	}
-	return res, nil
+	name := tempDir + utils.RandomString() + ".ogg"
+	writer, _ := oggwriter.New(name, audioSampleRate, 2)
+	b.tracks[quality] = &writingTrack{track: localTrack, writer: writer, filename: name}
+	return b.tracks[quality], nil
 }
 
 func getTrack(id string, quality int) (*webrtc.Track, error) {
@@ -136,6 +134,7 @@ func getTrack(id string, quality int) (*webrtc.Track, error) {
 
 func NewPeerConnectionWriter(id string, timestamp int64, tracks []string, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
 	stopped := false
+	audioFile := make(chan string, 3)
 	peerConnection, err := api.NewPeerConnection(config)
 	if err != nil {
 		return nil, err
@@ -165,8 +164,49 @@ func NewPeerConnectionWriter(id string, timestamp int64, tracks []string, offer 
 			return
 		}
 		defer func() {
-			localTrack[0].writer.Close()
-			trackDoneCallback(id, timestamp, quality, localTrack[0].filename)
+			if localTrack.writer != nil {
+				if err = localTrack.writer.Close(); err != nil {
+					log.Println(err)
+				}
+			}
+			mergedFile := ""
+			if quality == 0 {
+				for i := 0; i < len(tracks)-1; i++ {
+					if localTrack == nil {
+						audioFile <- ""
+					} else {
+						audioFile <- localTrack.filename
+					}
+				}
+				close(audioFile)
+				if localTrack != nil {
+					mergedFile = mediaDir + utils.RandomString() + ".ogg"
+					if err := exec.Command(ffmpegBin, "-i", localTrack.filename, ffmpegThread, ffmpegThreadNum, mergedFile).Run(); err != nil {
+						log.Println(err)
+						mergedFile = ""
+					}
+				}
+			} else {
+				audio := <-audioFile
+				if localTrack != nil {
+					mergedFile = mediaDir + utils.RandomString() + ".mp4"
+					if audio == "" {
+						if err := exec.Command(ffmpegBin, "-i", localTrack.filename, "-c:v", "h264", ffmpegThread, ffmpegThreadNum, "-s",
+							fmt.Sprintf("%dx%d", qualityResolution[quality][0], qualityResolution[quality][1]), mergedFile).Run(); err != nil {
+							log.Println(err)
+							mergedFile = ""
+						}
+					} else {
+						if err := exec.Command(ffmpegBin, "-i", localTrack.filename, "-c:v", "h264",
+							"-i", audio, "-c:a", "aac", ffmpegThread, ffmpegThreadNum, "-s",
+							fmt.Sprintf("%dx%d", qualityResolution[quality][0], qualityResolution[quality][1]), mergedFile).Run(); err != nil {
+							log.Println(err)
+							mergedFile = ""
+						}
+					}
+				}
+			}
+			trackDoneCallback(id, timestamp, quality, mergedFile)
 		}()
 		go func() {
 			routinePacket := func() {
@@ -198,22 +238,18 @@ func NewPeerConnectionWriter(id string, timestamp int64, tracks []string, offer 
 			}
 			rtp, err := remoteTrack.ReadRTP()
 			if err != nil {
-				log.Println(err)
+				// log.Println(err)
 				continue
 			}
 			// ErrClosedPipe means we don't have any subscribers, this is ok if no peers have connected yet
-			if err = localTrack[0].track.WriteRTP(rtp); err != nil && err != io.ErrClosedPipe {
+			if err = localTrack.track.WriteRTP(rtp); err != nil && err != io.ErrClosedPipe {
 				log.Println(err)
 			}
-			/*
-			if quality > 0 {
-				localTrack[0].writer.PushVP8(rtp)
-			} else {
-				for _, t := range localTrack {
-					t.writer.PushOpus(rtp)
+			if localTrack.writer != nil {
+				if err = localTrack.writer.WriteRTP(rtp); err != nil {
+					log.Println(err)
 				}
 			}
-			*/
 		}
 	})
 	peerConnection.OnConnectionStateChange(func(connectionState webrtc.PeerConnectionState) {

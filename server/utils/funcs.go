@@ -1,10 +1,10 @@
 package utils
 
 import (
-    "github.com/google/uuid"
+	"github.com/google/uuid"
 )
 
 func RandomString() string {
-    res, _ := uuid.NewRandom()
-    return res.String()
+	res, _ := uuid.NewRandom()
+	return res.String()
 }

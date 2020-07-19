@@ -1,10 +1,11 @@
 let chatType = "chat";
 let chatNumQueryInterval = 5000;
+let chatLive;
 
 let chat = new Vue({
     el: "#divChat",
     data: {
-        scrollToEnd: true,
+        autoScroll: true,
         messages: [],
         newMessage: {
             Message: "",
@@ -23,18 +24,20 @@ let chat = new Vue({
     watch: {
         messages: function () {
             this.$nextTick(function() {
-                if (!this.scrollToEnd) {
-                    return;
+                if (chatLive) {
+                    if (!this.autoScroll) {
+                        return;
+                    }
+                    $("#divChatMessage").scrollTop($("#divChatMessage")[0].scrollHeight);
+                } else {
+                    // TODO: Scroll the message div to correct position.
                 }
-                let divChatMessage = $("#divChatMessage");
-                divChatMessage.scrollTop(divChatMessage[0].scrollHeight);
             });
         }
     }
 });
 
 function ChatLoadMessage(messages) {
-    console.log(messages)
     if (!messages || messages.length === 0 || (chat.$data.messages.length > 0 && chat.$data.messages[0].ElapsedTime < messages[0].ElapsedTime)) {
         return;
     }
@@ -52,13 +55,17 @@ function ChatLoadMessage(messages) {
 
 function ChatOnMessageHandler(msg) {
     if (msg["Operation"] === "message") {
-        chat.$data.messages.push({
-            Username: msg["Username"],
-            MsgType: msg["MsgType"],
-            Message: msg["Message"],
-            ElapsedTime: msg["ElapsedTime"],
-            DisplayTime: new Date(msg["ElapsedTime"] * 1000).toUTCString()
-        })
+        if (chatLive) {
+            chat.$data.messages.push({
+                Username: msg["Username"],
+                MsgType: msg["MsgType"],
+                Message: msg["Message"],
+                ElapsedTime: msg["ElapsedTime"],
+                DisplayTime: new Date(msg["ElapsedTime"] * 1000).toUTCString()
+            });
+        } else {
+            // TODO: find the correct place and insert the message.
+        }
     } else if (msg["Operation"] === "numQuery") {
         $("#spanAudience").text("Audience: " + msg["Num"])
     }
@@ -70,6 +77,9 @@ function ChatSendMessage(msg) {
     let newMessage = msg;
     newMessage["Type"] = "chat";
     newMessage["Operation"] = "message";
+    if (!chatLive) {
+
+    }
     SockSendMessage(newMessage);
 }
 

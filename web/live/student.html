@@ -100,11 +100,11 @@
                             <span id="spanAudience" style="float: right">Audience: 0</span>
                         </div>
                         <div id="divCanvasBody" class="card-body" style="padding: 0;">
-                            <video id="video" poster="../res/img/marley-map.jpg" height="400" style="width: 100%; background: #000000;" autoplay muted></video>
+                            <video id="video" poster="../res/img/marley-map.jpg" height="400" style="width: 100%; background: #000000;" muted></video>
                             <canvas id="canvasPdf" style="position: absolute; z-index: 1; display: none;"></canvas>
                             <canvas id="canvasOpt" style="position: absolute; z-index: 2; display: none;"></canvas>
                             <canvas id="canvasBg" height="400" style="display: none;"></canvas>
-                            <audio id="audio" autoplay hidden></audio>
+                            <audio id="audio" hidden></audio>
                         </div>
                         <div id="divLiveOption" class="card-footer">
                             <div class="row">
@@ -126,8 +126,8 @@
                         <div class="card-header">
                             <h3 class="card-title">Direct Chat</h3>
                             <span style="float: right">
-                                <input id="checkScrollToEnd" v-model="scrollToEnd" type="checkbox" checked/>
-                                <label for="checkScrollToEnd">Scroll to End</label>
+                                <input id="checkAutoScroll" v-model="autoScroll" type="checkbox" checked/>
+                                <label for="checkAutoScroll">Auto Scroll</label>
                             </span>
                         </div>
                         <!-- /.card-header -->
@@ -192,27 +192,36 @@
 <script src="../res/plugins/adminlte/js/adminlte.js"></script>
 <!-- Vue -->
 <script src="../res/plugins/vue/vue.js"></script>
+<script src="../res/plugins/pdf/pdf.js"></script>
+<script type="application/javascript">
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '../res/plugins/pdf/pdf.worker.js';
+</script>
 
 <script src="../res/js/common.js"></script>
 <script src="../res/js/infra/sock.js"></script>
 <script src="../res/js/infra/rtc.js"></script>
 <script src="../res/js/service/chat.js"></script>
+<script type="application/javascript">
+    chatLive = true;
+</script>
+<script src="../res/js/service/sp.js"></script>
+<script type="application/javascript">
+    spBroadcast = false;
+</script>
 
 <!-- Page specified script -->
 <script type="application/javascript">
     let allQualities = [
-        {val: "0", tag: "low quality audio"},
-        {val: "1", tag: "medium quality audio"},
-        {val: "2", tag: "high quality audio"},
-        {val: "3", tag: "144p"},
-        {val: "4", tag: "360p"},
-        {val: "5", tag: "576p"}
+        {val: "0", tag: "Audio Only"},
+        {val: "1", tag: "144p"},
+        {val: "2", tag: "360p"},
+        {val: "3", tag: "576p"}
     ];
     let liveOption = new Vue({
         el: "#divLiveOption",
         data: {
             on: 0,
-            quality: "5",
+            quality: "3",
             qualities: allQualities,
             pdf: "",
             timestamp: 0
@@ -225,20 +234,11 @@
                 this.on = 1;
                 this.pdf = pdf;
                 this.qualities = allQualities.slice(0, qualities);
-                if (pdf === "") {
-                    this.qualities.push(...allQualities.slice(3, 3 + qualities));
-                }
-                let found = false;
-                for (let i = 0; i < this.qualities.length; i++) {
-                    if (this.qualities[i].val === this.quality) {
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) {
+
+                if (parseInt(this.quality) >= this.qualities.length) {
                     this.quality = this.qualities[this.qualities.length - 1].val;
                 }
-                if (RTCStart(false, null, null, pdf !== "", LiveRTCLoadCallback, LiveRTCFailedCallback, LiveRTCTrackCallback)) {
+                if (RTCStart(false, null, this.quality, LiveRTCLoadCallback, LiveRTCFailedCallback, LiveRTCTrackCallback)) {
                     return;
                 }
             },
@@ -268,9 +268,7 @@
                 }
                 this.pdf = "";
                 $("#audio")[0].srcObject = null;
-                $("#audio")[0].autoplay = false;
                 $("#video")[0].srcObject = null;
-                $("#video")[0].autoplay = false;
                 $("#video").show();
                 $("#canvasPdf").hide();
                 $("#canvasOpt").hide();
@@ -290,15 +288,13 @@
             Type: "live",
             Operation: "join",
             Offer: sdp,
-            Quality: quality % 3,
-            VideoRequired: quality >= 3
+            Quality: quality
         });
         if (!SockSendMessage({
             Type: "live",
             Operation: "join",
             Offer: sdp,
-            Quality: quality % 3,
-            VideoRequired: quality >= 3
+            Quality: quality
         })) {
             liveOption.stop(true);
         }
@@ -313,10 +309,10 @@
         console.log(strm);
         if (strm.id === "audio") {
             $("#audio")[0].srcObject = strm;
-            $("#audio")[0].autoplay = true;
+            $("#audio")[0].play();
         } else if (strm.id === "video") {
             $("#video")[0].srcObject = strm;
-            $("#video")[0].autoplay = true;
+            $("#video")[0].play();
         }
     }
 
@@ -343,11 +339,17 @@
                 return;
             }
             ChatLoadMessage(msg["Chats"]);
-            if (msg["Broadcaster"]["Timestamp"] === liveOption.$data.timestamp && liveOption.$data.pdf) {
-                SpStart(liveOption.$data.pdf, msg["Broadcaster"]["Operations"], false);
+            if (msg["Timestamp"] === liveOption.$data.timestamp && liveOption.$data.pdf) {
+                let opts = [];
+                if (msg["Operations"]) {
+                    for (let i = 0; i < msg["Operations"].length; i++) {
+                        opts.push(...JSON.parse(msg["Operations"][i]));
+                    }
+                }
+                SpStart(FileUrl(liveOption.$data.pdf), opts);
             }
         } else if (msg["Operation"] === "opt") {
-            // TODO: Deal with opts.
+           SpDrawSeries(JSON.parse(msg["Opt"]));
         }
     }
 

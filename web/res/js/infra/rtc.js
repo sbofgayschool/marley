@@ -1,7 +1,7 @@
 let rtcPC;
 let rtcStatus = 0;
 
-function RTCStart(broadcast, rawTracks, quality, sp, loadCallback, failedCallback, onTrackCallback) {
+function RTCStart(broadcast, rawTracks, quality, loadCallback, failedCallback, onTrackCallback) {
     if (rtcStatus !== 0) {
         return false;
     }
@@ -12,18 +12,12 @@ function RTCStart(broadcast, rawTracks, quality, sp, loadCallback, failedCallbac
     let tracks = [];
     if (broadcast) {
         for (let i = 0; i <= quality; i++) {
-            if (sp) {
-                tracks.push([rawTracks[i][0].id]);
-                curPC.addTrack(rawTracks[i][0]);
-            } else {
-                tracks.push([rawTracks[i][0].id, rawTracks[i][1].id]);
-                curPC.addTrack(rawTracks[i][0]);
-                curPC.addTrack(rawTracks[i][1]);
-            }
+            tracks.push(rawTracks[i].id);
+            curPC.addTrack(rawTracks[i]);
         }
     } else {
         curPC.addTransceiver("audio");
-        if (!sp) {
+        if (quality > 0) {
             curPC.addTransceiver("video");
         }
         curPC.ontrack = onTrackCallback;

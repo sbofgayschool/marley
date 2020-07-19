@@ -1,4 +1,4 @@
-let spBroadcast = null;
+let spBroadcast = undefined;
 
 let spCanvasPdf;
 let spContextPdf;
@@ -11,31 +11,54 @@ let spPageOpts = [];
 let spCurPage = -1;
 let spPdfObject = null;
 
-let spFileUploadDir = "res/file/sp/";
-
 let spBroadcastPrevCoord = null;
 let spBroadcastPrevTime = null;
 
-function SpStart(pdf, opts, broadcast) {
+let spBroadcastSendInterval = 125;
+let spBroadcastOptInterval = 50;
+
+function SpStart(pdf, opts, timestamp) {
     if (spStartTime) {
         return;
     }
-    spBroadcast = broadcast;
-    spOpts = opts;
+    if (opts) {
+        spOpts = opts;
+    }
     spStartTime = new Date();
     let curStartTime = spStartTime;
+    if (spBroadcast === true || spBroadcast === false) {
+        SpRedraw(null);
+    } else {
+        SpRedraw(1);
+    }
     pdfjsLib.getDocument(pdf).promise.then(function(pdfObj) {
         if (curStartTime !== spStartTime) {
             return;
         }
         spPdfObject = pdfObj;
-        SpRedraw(null);
+        if (spBroadcast) {
+            $("#spanSpNote").hide();
+            $("#btnSpPagePrev").show();
+            $("#btnSpClean").show();
+            $("#btnSpPageNext").show();
+        }
+        SpDrawPdf(spCurPage);
     });
-    if (broadcast) {
+    if (spBroadcast) {
         spCanvasOpt.onmousedown = SpBroadcastMouseDown;
         spCanvasOpt.onmouseup = SpBroadcastMouseUp;
         spCanvasOpt.onmousemove = SpBroadcastMouseMove;
-        // TODO: Start opt send timer
+        setTimeout(function SendOpt() {
+            if (curStartTime !== spStartTime) {
+                return;
+            }
+            if (spOpts.length !== 0) {
+                if (SockSendMessage({Type: liveType, Operation: "opt", Opt: JSON.stringify(spOpts), Timestamp: timestamp})) {
+                    spOpts = [];
+                }
+            }
+            setTimeout(SendOpt, spBroadcastSendInterval);
+        }, spBroadcastSendInterval);
     }
 }
 
@@ -44,12 +67,17 @@ function SpStop() {
         return;
     }
     SpReset();
-    spBroadcast = null;
     spCanvasOpt.onmousedown = spCanvasOpt.onmouseup = spCanvasOpt.onmousemove = null;
     spStartTime = null;
     spOpts = [];
     spCurPage = -1;
     spPdfObject = null;
+    if (spBroadcast) {
+        $("#spanSpNote").show();
+        $("#btnSpPagePrev").hide();
+        $("#btnSpClean").hide();
+        $("#btnSpPageNext").hide();
+    }
 }
 
 function SpReset() {
@@ -74,17 +102,18 @@ function SpDrawPdf(page) {
 }
 
 function SpDrawLine(start, end) {
-    spContextOpt.beginPath();
-    spContextOpt.moveTo(start[0] * spCanvasOpt.width, start[1] * spCanvasOpt.height);
-    spContextOpt.lineTo(end[0] * spCanvasOpt.width, end[1] * spCanvasOpt.height);
-    spContextOpt.stroke();
+    if (!start && !end) {
+        spContextOpt.clearRect (0, 0, spCanvasOpt.width, spCanvasOpt.height);
+    } else {
+        spContextOpt.beginPath();
+        spContextOpt.moveTo(start[0] * spCanvasOpt.width, start[1] * spCanvasOpt.height);
+        spContextOpt.lineTo(end[0] * spCanvasOpt.width, end[1] * spCanvasOpt.height);
+        spContextOpt.stroke();
+    }
 }
 
 function SpChangePage(page, omitDraw) {
     if (!spStartTime || page === spCurPage) {
-        return;
-    }
-    if (spBroadcast && (!spPdfObject || spPdfObject.numPages <= page)) {
         return;
     }
     spCurPage = page;
@@ -96,7 +125,8 @@ function SpChangePage(page, omitDraw) {
     }
     if (!omitDraw) {
         SpDrawPdf(page);
-        for (let i = 0; i < spPageOpts[page]; i += 2) {
+        spContextOpt.clearRect (0, 0, spCanvasOpt.width, spCanvasOpt.height);
+        for (let i = 0; i < spPageOpts[page].length; i += 2) {
             SpDrawLine(spPageOpts[page][i], spPageOpts[page][i + 1]);
         }
     }
@@ -109,16 +139,31 @@ function SpAct(opt, page, omitDraw) {
     if (page !== spCurPage) {
         SpChangePage(page);
     }
-    spPageOpts[page].push(opt[0], opt[1]);
+    spPageOpts[page].push(opt[0]);
+    spPageOpts[page].push(opt[1]);
     if (spBroadcast) {
         if (spOpts.length === 0) {
             spOpts.push([page]);
         }
-        spOpts[spOpts.length - 1].push(opt[0], opt[1]);
+        spOpts[spOpts.length - 1].push(opt[0]);
+        spOpts[spOpts.length - 1].push(opt[1]);
     }
     if (!omitDraw) {
         SpDrawLine(opt[0], opt[1]);
     }
+}
+
+function SpDrawSeries(opts) {
+    if (opts.length === 0) {
+        return;
+    }
+    for (let i = 0; i < opts.length; i++) {
+        SpChangePage(opts[i][0], opts[i][0] !== opts[opts.length - 1][0]);
+        for (let j = 1; j < opts[i].length; j += 2) {
+            SpAct([opts[i][j], opts[i][j + 1]], opts[i][0], opts[i][0] !== opts[opts.length - 1][0]);
+        }
+    }
+
 }
 
 function SpRedraw(elapsedTime) {
@@ -132,12 +177,7 @@ function SpRedraw(elapsedTime) {
     if (elapsedTime >= 0) {
         // TODO: Select options according to elapsed time.
     }
-    for (let i = 0; i < opts.length; i++) {
-        SpChangePage(opts[i][0], i !== opts.length - 1);
-        for (let j = 1; j < opts[i].length; j += 2) {
-            SpAct([opts[i][j], opts[i][j + 1]], opts[i][0], i !== opts.length - 1);
-        }
-    }
+    SpDrawSeries(opts);
 }
 
 function SpBroadcastMouseDown(e) {
@@ -156,7 +196,7 @@ function SpBroadcastMouseUp(e) {
 }
 
 function SpBroadcastMouseMove(e) {
-    if (!spStartTime || !spBroadcast || !spPdfObject || !spBroadcastPrevTime || Date.now() - spBroadcastPrevTime <= 70) {
+    if (!spStartTime || !spBroadcast || !spPdfObject || !spBroadcastPrevTime || Date.now() - spBroadcastPrevTime < spBroadcastOptInterval) {
         return;
     }
     let curCoord = SpGenerateCoord(e);
@@ -165,16 +205,26 @@ function SpBroadcastMouseMove(e) {
     spBroadcastPrevCoord = curCoord;
 }
 
+function SpBroadcastSetPage(next) {
+    if (!spStartTime || !spBroadcast || !spPdfObject) {
+        return;
+    }
+    if (next) {
+        if (spCurPage === spPdfObject.numPages - 1) {
+            return;
+        }
+        SpChangePage(spCurPage + 1, false);
+    } else {
+        if (spCurPage === 0) {
+            return;
+        }
+        SpChangePage(spCurPage - 1, false);
+    }
+}
+
 function SpGenerateCoord(e) {
-    console.log(e.clientX, e.clientY);
-    console.log(
-        (e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft - spCanvasOpt.offsetLeft) / spCanvasOpt.width,
-        (e.clientY + document.body.scrollTop + document.documentElement.scrollTop - spCanvasOpt.offsetTop) / spCanvasOpt.height
-    )
-    return [
-        (e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft - spCanvasOpt.offsetLeft) / spCanvasOpt.width,
-        (e.clientY + document.body.scrollTop + document.documentElement.scrollTop - spCanvasOpt.offsetTop) / spCanvasOpt.height
-    ];
+    let bounds = spCanvasOpt.getBoundingClientRect();
+    return [(e.clientX - bounds.left) / bounds.width, (e.clientY - bounds.top) / bounds.height];
 }
 
 $(function () {

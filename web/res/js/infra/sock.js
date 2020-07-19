@@ -33,6 +33,10 @@ function SockSendMessage(message) {
     if (typeof(message) !== "string") {
         message = JSON.stringify(message);
     }
-    sock.send(message);
+    try {
+        sock.send(message);
+    } catch (e) {
+        return false;
+    }
     return true;
 }

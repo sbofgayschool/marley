@@ -117,10 +117,11 @@
                             <div class="row">
                                 <button v-on:click="switchButton(on == 0)" class="col-2 btn btn-primary" :disabled="on == 1">{{!on ? "Start" : "Stop"}}</button>
                                 <div class="col-2">
-                                    <select v-model="qualities" class="form-control" :disabled="on > 0" v-on:change="switchQuality()">
-                                        <option value="0">144p</option>
-                                        <option value="1">144p & 360p</option>
-                                        <option value="2">144p & 360p & 576p</option>
+                                    <select v-model="qualities" class="form-control" :disabled="on > 0">
+                                        <option value="0">Audio only</option>
+                                        <option v-if="!sp" value="1">144p</option>
+                                        <option v-if="!sp" value="2">144p & 360p</option>
+                                        <option v-if="!sp" value="3">144p & 360p & 576p</option>
                                     </select>
                                 </div>
                                 <button v-on:click="switchSp()" class="col-2 btn btn-primary" :disabled="on > 0">{{!sp ? "Special" : "Normal"}}</button>
@@ -148,6 +149,12 @@
                             <canvas id="canvasBg" height="400" style="display: none;"></canvas>
                         </div>
                         <div class="card-footer">
+                            <span style="float: right">
+                                <span id="spanSpNote">Controllers are not available.</span>
+                                <button id="btnSpPagePrev" onclick="SpBroadcastSetPage(false)" class="btn btn-primary" style="display: none">Previous Page</button>
+                                <button id="btnSpClean" onclick="SpAct([null, null], spCurPage, false)" class="btn btn-danger" style="display: none">Clean</button>
+                                <button id="btnSpPageNext" onclick="SpBroadcastSetPage(true)" class="btn btn-primary" style="display: none">Next Page</button>
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -157,8 +164,8 @@
                         <div class="card-header">
                             <h3 class="card-title">Direct Chat</h3>
                             <span style="float: right">
-                                <input id="checkScrollToEnd" v-model="scrollToEnd" type="checkbox" checked/>
-                                <label for="checkScrollToEnd">Scroll to End</label>
+                                <input id="checkAutoScroll" v-model="autoScroll" type="checkbox" checked/>
+                                <label for="checkAutoScroll">Auto Scroll</label>
                             </span>
                         </div>
                         <!-- /.card-header -->
@@ -256,19 +263,23 @@
 <script src="../res/js/infra/sock.js"></script>
 <script src="../res/js/infra/rtc.js"></script>
 <script src="../res/js/service/chat.js"></script>
+<script type="application/javascript">
+    chatLive = true;
+</script>
 <script src="../res/js/service/sp.js"></script>
+<script type="application/javascript">
+    spBroadcast = true;
+</script>
 
 <!-- Page specified script -->
 <script type="application/javascript">
     let liveType = "live";
-
-    let liveTracks = [[null, null, null], [null, null, null], [null, null, null]];
-
+    let liveTracks = [null, null, null, null];
     let liveOption = new Vue({
         el: "#divLiveOption",
         data: {
             on: 0,
-            qualities: "2",
+            qualities: "3",
             sp: false,
             pdf: "",
             timestamp: 0
@@ -283,7 +294,7 @@
                         return;
                     }
                     this.on = 1;
-                    if (RTCStart(true, liveTracks, parseInt(this.qualities), this.sp, LiveRTCLoadCallback, LiveRTCFailedCallback)) {
+                    if (RTCStart(true, liveTracks, parseInt(this.qualities), LiveRTCLoadCallback, LiveRTCFailedCallback)) {
                         return;
                     }
                 }
@@ -296,7 +307,7 @@
                 this.on = 2;
                 this.timestamp = timestamp;
                 if (liveOption.sp) {
-                    SpStart(FileUrl(liveOption.pdf), [], true);
+                    SpStart(FileUrl(liveOption.pdf), [], timestamp);
                 }
             },
             stop: function(invoke) {
@@ -312,17 +323,16 @@
                     SpStop();
                 }
             },
-            switchQuality: function() {
-                $("#video")[0].srcObject = liveTracks[parseInt(liveOption.$data.qualities)][2];
-            },
             switchSp: function() {
                 this.sp = !this.sp;
                 if (this.sp) {
+                    this.qualities = "0";
                     $("#video").hide();
                     $("#canvasPdf").show();
                     $("#canvasOpt").show();
                     $("#canvasBg").show();
                 } else {
+                    this.qualities = "3";
                     $("#video").show();
                     $("#canvasPdf").hide();
                     $("#canvasOpt").hide();
@@ -375,26 +385,21 @@
     }
 
     $(function() {
-        navigator.mediaDevices.getUserMedia({video: {height: 576, frameRate: 19}, audio: {sampleSize: 24}}).then(
+        navigator.mediaDevices.getUserMedia({video: {height: 576, frameRate: 19}, audio: true}).then(
             function(stream) {
-                liveTracks[2][0] = stream.getAudioTracks()[0];
-                liveTracks[2][1] = stream.getVideoTracks()[0];
-                liveTracks[2][2] = stream;
+                liveTracks[0] = stream.getAudioTracks()[0];
+                liveTracks[3] = stream.getVideoTracks()[0];
                 $("#video")[0].srcObject = stream;
             }
         );
-        navigator.mediaDevices.getUserMedia({video: {height: 360, frameRate: 17}, audio: {sampleSize: 16}}).then(
+        navigator.mediaDevices.getUserMedia({video: {height: 360, frameRate: 17}, audio: true}).then(
             function(stream) {
-                liveTracks[1][0] = stream.getAudioTracks()[0];
-                liveTracks[1][1] = stream.getVideoTracks()[0];
-                liveTracks[1][2] = stream;
+                liveTracks[2] = stream.getVideoTracks()[0];
             }
         );
-        navigator.mediaDevices.getUserMedia({video: {height: 144, frameRate: 15}, audio: {sampleSize: 8}}).then(
+        navigator.mediaDevices.getUserMedia({video: {height: 144, frameRate: 15}, audio: true}).then(
             function(stream) {
-                liveTracks[0][0] = stream.getAudioTracks()[0];
-                liveTracks[0][1] = stream.getVideoTracks()[0];
-                liveTracks[0][2] = stream;
+                liveTracks[1] = stream.getVideoTracks()[0];
             }
         );
         sockMessageHandler[liveType] = LiveOnMessageHandler;

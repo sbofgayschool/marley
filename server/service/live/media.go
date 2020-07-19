@@ -44,8 +44,8 @@ func connectionDoneCallback(id string, timestamp int64) {
 	}
 }
 
-func trackDoneCallback(id string, timestamp int64, quality int, video bool, filename string) {
-	log.Printf("track: %v %v %v %v %v is over\n", id, timestamp, quality, video, filename)
+func trackDoneCallback(id string, timestamp int64, quality int, filename string) {
+	log.Printf("track: %v %v %v %v is over\n", id, timestamp, quality, filename)
 	// TODO: Move the handled video to proper position, and put relative data into database.
 }
 
@@ -75,7 +75,7 @@ func check(id string) *Broadcaster {
 	}
 }
 
-func join(id string, quality int, videoRequired bool, sdpString string) (*webrtc.SessionDescription, int64, error) {
+func join(id string, quality int, sdpString string) (*webrtc.SessionDescription, int64, error) {
 	var timestamp int64 = -1
 	lock.RLock()
 	if b, ok := broadcasters[id]; ok {
@@ -85,22 +85,19 @@ func join(id string, quality int, videoRequired bool, sdpString string) (*webrtc
 	if timestamp == -1 {
 		return nil, -1, errors.New("no broadcaster")
 	}
-	if ans, err := rtc.NewPeerConnectionReader(id, quality, videoRequired, &webrtc.SessionDescription{Type: webrtc.SDPTypeOffer, SDP: sdpString}); err != nil {
+	if ans, err := rtc.NewPeerConnectionReader(id, quality, &webrtc.SessionDescription{Type: webrtc.SDPTypeOffer, SDP: sdpString}); err != nil {
 		return nil, -1, err
 	} else {
 		return ans, timestamp, nil
 	}
 }
 
-func add(id string, tracks [][]string, pdf string, sdpString string) (*webrtc.SessionDescription, int64, error) {
+func add(id string, tracks []string, pdf string, sdpString string) (*webrtc.SessionDescription, int64, error) {
 	lock.RLock()
 	_, ok := broadcasters[id]
 	lock.RUnlock()
 	if ok {
 		return nil, -1, errors.New("broadcaster exists")
-	}
-	if len(tracks[0]) == 1 && len(pdf) == 0 {
-		return nil, -1, errors.New("pdf file required")
 	}
 	t := time.Now().Unix()
 	if ans, err := rtc.NewPeerConnectionWriter(id, t, tracks, &webrtc.SessionDescription{Type: webrtc.SDPTypeOffer, SDP: sdpString}); err != nil {
@@ -128,13 +125,9 @@ func sockHandler(msg *sock.Message, broker chan *sock.Message) (res []*sock.Mess
 		if u.Teacher {
 			go func() {
 				offer := content["Offer"].(map[string]interface{})
-				var tracks [][]string
+				var tracks []string
 				for _, ts := range content["Tracks"].([]interface{}) {
-					var nt []string
-					for _, t := range ts.([]interface{}) {
-						nt = append(nt, t.(string))
-					}
-					tracks = append(tracks, nt)
+					tracks = append(tracks, ts.(string))
 				}
 				answer, timestamp, err := add(msg.Client.Gid, tracks, content["Pdf"].(string), offer["sdp"].(string))
 				errMessage := ""
@@ -161,7 +154,7 @@ func sockHandler(msg *sock.Message, broker chan *sock.Message) (res []*sock.Mess
 	case "join":
 		go func() {
 			offer := content["Offer"].(map[string]interface{})
-			if answer, t, err := join(msg.Client.Gid, int(content["Quality"].(float64)), content["VideoRequired"].(bool), offer["sdp"].(string)); err != nil {
+			if answer, t, err := join(msg.Client.Gid, int(content["Quality"].(float64)), offer["sdp"].(string)); err != nil {
 				broker <- &sock.Message{Client: msg.Client, Content: map[string]interface{}{
 					sock.TagField:  Tag,
 					OperationField: "join",
@@ -181,7 +174,7 @@ func sockHandler(msg *sock.Message, broker chan *sock.Message) (res []*sock.Mess
 		}()
 	case "opt":
 		if u.Teacher {
-			if err := addOperation(msg.Client.Gid, content["Timestamp"].(int64), content["Opt"].(string)); err == nil {
+			if err := addOperation(msg.Client.Gid, int64(content["Timestamp"].(float64)), content["Opt"].(string)); err == nil {
 				res = append(res, &sock.Message{Client: nil, Content: content})
 			}
 		}

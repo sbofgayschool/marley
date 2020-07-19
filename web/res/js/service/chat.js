@@ -48,7 +48,7 @@ function ChatLoadMessage(messages) {
             MsgType: messages[i]["MsgType"],
             Message: messages[i]["Message"],
             ElapsedTime: messages[i]["ElapsedTime"],
-            DisplayTime: new Date(messages[i]["ElapsedTime"] * 1000).toUTCString()
+            DisplayTime: new Date(messages[i]["ElapsedTime"]).toUTCString()
         });
     }
 }
@@ -61,7 +61,7 @@ function ChatOnMessageHandler(msg) {
                 MsgType: msg["MsgType"],
                 Message: msg["Message"],
                 ElapsedTime: msg["ElapsedTime"],
-                DisplayTime: new Date(msg["ElapsedTime"] * 1000).toUTCString()
+                DisplayTime: new Date(msg["ElapsedTime"]).toUTCString()
             });
         } else {
             // TODO: find the correct place and insert the message.

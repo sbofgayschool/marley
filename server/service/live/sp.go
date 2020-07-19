@@ -2,7 +2,7 @@ package live
 
 import (
 	"errors"
-	"time"
+	"github.com/sbofgayschool/marley/server/utils"
 )
 
 type operation struct {
@@ -15,7 +15,7 @@ func addOperation(id string, timestamp int64, opt string) error {
 	if !ok || b.Timestamp != timestamp {
 		return errors.New("broadcasting has stopped")
 	}
-	b.operations = append(b.operations, &operation{opt: opt, elapsedTime: time.Now().Unix() - b.Timestamp})
+	b.operations = append(b.operations, &operation{opt: opt, elapsedTime: utils.UnixMillion()})
 	return nil
 }
 

@@ -4,7 +4,6 @@ import (
 	"github.com/sbofgayschool/marley/server/infra/sock"
 	"github.com/sbofgayschool/marley/server/service/common"
 	"github.com/sbofgayschool/marley/server/service/user"
-	"time"
 )
 
 const (
@@ -50,7 +49,7 @@ func sockHandler(msg *sock.Message, _ chan *sock.Message) (res []*sock.Message) 
 		}})
 	case "message":
 		content["Username"] = u.Username
-		elapsedTime := time.Now().Unix()
+		elapsedTime := utils.UnixMillion()
 		if e, ok := content["ElapsedTime"]; ok {
 			elapsedTime = e.(int64)
 		}

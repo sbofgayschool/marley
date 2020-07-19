@@ -132,7 +132,7 @@ func getTrack(id string, quality int) (*webrtc.Track, error) {
 	}
 }
 
-func NewPeerConnectionWriter(id string, timestamp int64, tracks []string, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
+func NewPeerConnectionWriter(id string, timestamp int64, tracks []string, audioTimeStamp *int64, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
 	stopped := false
 	audioFile := make(chan string, 3)
 	peerConnection, err := api.NewPeerConnection(config)
@@ -161,10 +161,10 @@ func NewPeerConnectionWriter(id string, timestamp int64, tracks []string, offer 
 		localTrack, err := setTrack(id, quality, timestamp, peerConnection, remoteTrack)
 		if err != nil {
 			log.Println(err)
-			return
+			localTrack = nil
 		}
 		defer func() {
-			if localTrack.writer != nil {
+			if localTrack != nil && localTrack.writer != nil {
 				if err = localTrack.writer.Close(); err != nil {
 					log.Println(err)
 				}
@@ -172,14 +172,14 @@ func NewPeerConnectionWriter(id string, timestamp int64, tracks []string, offer 
 			mergedFile := ""
 			if quality == 0 {
 				for i := 0; i < len(tracks)-1; i++ {
-					if localTrack == nil {
-						audioFile <- ""
-					} else {
+					if localTrack != nil && localTrack.writer != nil {
 						audioFile <- localTrack.filename
+					} else {
+						audioFile <- ""
 					}
 				}
 				close(audioFile)
-				if localTrack != nil {
+				if localTrack != nil && localTrack.writer != nil {
 					mergedFile = mediaDir + utils.RandomString() + ".ogg"
 					if err := exec.Command(ffmpegBin, "-i", localTrack.filename, ffmpegThread, ffmpegThreadNum, mergedFile).Run(); err != nil {
 						log.Println(err)
@@ -188,7 +188,7 @@ func NewPeerConnectionWriter(id string, timestamp int64, tracks []string, offer 
 				}
 			} else {
 				audio := <-audioFile
-				if localTrack != nil {
+				if localTrack != nil && localTrack.writer != nil {
 					mergedFile = mediaDir + utils.RandomString() + ".mp4"
 					if audio == "" {
 						if err := exec.Command(ffmpegBin, "-i", localTrack.filename, "-c:v", "h264", ffmpegThread, ffmpegThreadNum, "-s",
@@ -208,6 +208,9 @@ func NewPeerConnectionWriter(id string, timestamp int64, tracks []string, offer 
 			}
 			trackDoneCallback(id, timestamp, quality, mergedFile)
 		}()
+		if localTrack == nil {
+			return
+		}
 		go func() {
 			routinePacket := func() {
 				if rtcpSendErr := peerConnection.WriteRTCP([]rtcp.Packet{&rtcp.PictureLossIndication{
@@ -232,6 +235,7 @@ func NewPeerConnectionWriter(id string, timestamp int64, tracks []string, offer 
 			}
 			ticker.Stop()
 		}()
+		*audioTimeStamp = utils.UnixMillion()
 		for {
 			if stopped {
 				break

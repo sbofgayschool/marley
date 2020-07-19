@@ -2,6 +2,7 @@ package live
 
 import (
 	"errors"
+	"github.com/sbofgayschool/marley/server/utils"
 	"sync"
 
 	"log"
@@ -22,6 +23,7 @@ const (
 
 type Broadcaster struct {
 	Timestamp  int64
+	audioTimestamp *int64
 	Qualities  int
 	Pdf        string
 	operations []*operation
@@ -99,14 +101,15 @@ func add(id string, tracks []string, pdf string, sdpString string) (*webrtc.Sess
 	if ok {
 		return nil, -1, errors.New("broadcaster exists")
 	}
-	t := time.Now().Unix()
-	if ans, err := rtc.NewPeerConnectionWriter(id, t, tracks, &webrtc.SessionDescription{Type: webrtc.SDPTypeOffer, SDP: sdpString}); err != nil {
+	t := utils.UnixMillion()
+	var audioTimestamp int64
+	if ans, err := rtc.NewPeerConnectionWriter(id, t, tracks, &audioTimestamp, &webrtc.SessionDescription{Type: webrtc.SDPTypeOffer, SDP: sdpString}); err != nil {
 		return nil, -1, err
 	} else {
 		// TODO: Put metadata into database.
 		lock.Lock()
 		defer lock.Unlock()
-		broadcasters[id] = &Broadcaster{Timestamp: t, Qualities: len(tracks), Pdf: pdf}
+		broadcasters[id] = &Broadcaster{Timestamp: t, Qualities: len(tracks), Pdf: pdf, audioTimestamp: &audioTimestamp}
 		return ans, t, nil
 	}
 }

@@ -18,6 +18,10 @@ let spBroadcastPrevTime = null;
 let spBroadcastSendInterval = 125;
 let spBroadcastOptInterval = 50;
 
+let spVodPrevTime = -1;
+let spVodNextIndex = 0;
+let spVodProgressInterval = 50;
+
 function SpStart(pdf, opts, timestamp) {
     if (spStartTime) {
         return;
@@ -30,7 +34,7 @@ function SpStart(pdf, opts, timestamp) {
     if (spBroadcast === true || spBroadcast === false) {
         SpRedraw(null);
     } else {
-        SpRedraw(1);
+        SpRedraw(0);
     }
     pdfjsLib.getDocument(pdf).promise.then(function(pdfObj) {
         if (curStartTime !== spStartTime) {
@@ -60,6 +64,8 @@ function SpStart(pdf, opts, timestamp) {
             }
             setTimeout(SendOpt, spBroadcastSendInterval);
         }, spBroadcastSendInterval);
+    } else if (spBroadcast === null ){
+        setInterval(SpVodProgress, spVodProgressInterval);
     }
 }
 
@@ -201,9 +207,18 @@ function SpRedraw(elapsedTime) {
     SpReset();
     SpDrawPdf(0);
     spPageOpts.push([]);
-    let opts = spOpts;
-    if (elapsedTime >= 0) {
-        // TODO: Select options according to elapsed time.
+    let opts = [];
+    if (spBroadcast === null) {
+        spVodNextIndex = 0;
+        for (let i = 0; i < spOpts.length; i++) {
+            if (spOpts[i][spOpts[i].length - 1] > elapsedTime) {
+                break;
+            }
+            spVodNextIndex = i + 1;
+            opts.push(spOpts[i]);
+        }
+    } else {
+        opts = spOpts;
     }
     SpDrawSeries(opts);
 }
@@ -255,7 +270,23 @@ function SpGenerateCoord(e) {
     return [(e.clientX - bounds.left) / bounds.width, (e.clientY - bounds.top) / bounds.height];
 }
 
-// TODO: Vod Progress check and handler
+function SpVodProgress() {
+    let curTime = vodSource.currentTime;
+    if (curTime >= spVodPrevTime) {
+        let opts = [];
+        for (let i = spVodNextIndex; i < spOpts.length; i++) {
+            if (spOpts[i][spOpts[i].length - 1] > curTime) {
+                break;
+            }
+            spVodNextIndex = i + 1;
+            opts.push(spOpts[i]);
+        }
+        SpDrawSeries(opts);
+    } else {
+        SpRedraw(curTime);
+    }
+    spVodPrevTime = curTime;
+}
 
 $(function () {
     spCanvasPdf = $("#canvasPdf")[0];

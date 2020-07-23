@@ -58,7 +58,7 @@ let chat = new Vue({
                     }
                     $("#divChatMessage").scrollTop($("#divChatMessage")[0].scrollHeight);
                 } else {
-                    // TODO: Scroll the message div to correct position.
+                    // Currently nothing will be done when new message is inserted in Vod mode.
                 }
             });
         }
@@ -66,19 +66,23 @@ let chat = new Vue({
 });
 
 function ChatLoadMessage(messages) {
-    if (!messages || messages.length === 0 || (chat.$data.messages.length > 0 && chat.$data.messages[0].ElapsedTime < messages[0].ElapsedTime)) {
-        return;
-    }
-    chat.$data.messages = [];
-    for (let i in messages) {
-        chat.$data.messages.push({
-            Username: messages[i]["Username"],
-            MsgType: messages[i]["MsgType"],
-            Message: messages[i]["Message"],
-            Source: messages[i]["Source"],
-            ElapsedTime: messages[i]["ElapsedTime"],
-            DisplayTime: new Date(messages[i]["ElapsedTime"]).toUTCString()
-        });
+    if (chatLive) {
+        if (!messages || messages.length === 0 || (chat.$data.messages.length > 0 && chat.$data.messages[0].ElapsedTime < messages[0].ElapsedTime)) {
+            return;
+        }
+        chat.$data.messages = [];
+        for (let i in messages) {
+            chat.$data.messages.push({
+                Username: messages[i]["Username"],
+                MsgType: messages[i]["MsgType"],
+                Message: messages[i]["Message"],
+                Source: messages[i]["Source"],
+                ElapsedTime: messages[i]["ElapsedTime"],
+                DisplayTime: new Date(messages[i]["ElapsedTime"]).toUTCString()
+            });
+        }
+    } else {
+        // Todo: use single shot merge sort to combine loaded chat message with received message
     }
 }
 
@@ -97,7 +101,7 @@ function ChatOnMessageHandler(msg) {
             // TODO: find the correct place and insert the message.
         }
     } else if (msg["Operation"] === "numQuery") {
-        $("#spanAudience").text("Audience: " + msg["Num"])
+        $("#spanAudience").text("Audience: " + msg["Num"]);
     }
 }
 
@@ -108,7 +112,7 @@ function ChatSendMessage(msg) {
     newMessage["Type"] = "chat";
     newMessage["Operation"] = "message";
     if (!chatLive) {
-
+        newMessage["ElapsedTime"] = Math.round(vodSource.currentTime * 1000);
     }
     SockSendMessage(newMessage);
 }
@@ -135,7 +139,7 @@ function ChatUploadFile(confirm) {
     }, null, false);
 }
 
-// TODO: Vod Progress check and handler
+// TODO: Vod Progress check and handler. Scroll the message div to correct position.
 
 $(function() {
     navigator.mediaDevices.getUserMedia({video: false, audio: true}).then(

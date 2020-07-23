@@ -65,38 +65,43 @@ let chat = new Vue({
     }
 });
 
-function ChatLoadMessage(messages) {
+function ChatConvertTime(time) {
     if (chatLive) {
-        if (!messages || messages.length === 0 || (chat.$data.messages.length > 0 && chat.$data.messages[0].ElapsedTime < messages[0].ElapsedTime)) {
-            return;
-        }
-        chat.$data.messages = [];
-        for (let i in messages) {
-            chat.$data.messages.push({
-                Username: messages[i]["Username"],
-                MsgType: messages[i]["MsgType"],
-                Message: messages[i]["Message"],
-                Source: messages[i]["Source"],
-                ElapsedTime: messages[i]["ElapsedTime"],
-                DisplayTime: new Date(messages[i]["ElapsedTime"]).toUTCString()
-            });
-        }
+        return new Date(time).toUTCString();
     } else {
-        // Todo: use single shot merge sort to combine loaded chat message with received message
+        // TODO: Convert elapsed time properly in vod mode.
+    }
+}
+
+function ChatLoadMessage(messages) {
+    if (chatLive && (!messages || messages.length === 0 || (chat.$data.messages.length > 0 && chat.$data.messages[0].ElapsedTime < messages[0].ElapsedTime))) {
+        return;
+    }
+    chat.$data.messages = [];
+    for (let i in messages) {
+        chat.$data.messages.push({
+            Username: messages[i]["Username"],
+            MsgType: messages[i]["MsgType"],
+            Message: messages[i]["Message"],
+            Source: messages[i]["Source"],
+            ElapsedTime: messages[i]["ElapsedTime"],
+            DisplayTime: ChatConvertTime(messages[i]["ElapsedTime"])
+        });
     }
 }
 
 function ChatOnMessageHandler(msg) {
     if (msg["Operation"] === "message") {
+        let message = {
+            Username: msg["Username"],
+            MsgType: msg["MsgType"],
+            Message: msg["Message"],
+            Source: msg["Source"],
+            ElapsedTime: msg["ElapsedTime"],
+            DisplayTime: ChatConvertTime(msg["ElapsedTime"])
+        };
         if (chatLive) {
-            chat.$data.messages.push({
-                Username: msg["Username"],
-                MsgType: msg["MsgType"],
-                Message: msg["Message"],
-                Source: msg["Source"],
-                ElapsedTime: msg["ElapsedTime"],
-                DisplayTime: new Date(msg["ElapsedTime"]).toUTCString()
-            });
+            chat.$data.messages.push(message);
         } else {
             // TODO: find the correct place and insert the message.
         }

@@ -133,7 +133,7 @@
                         <!-- /.card-header -->
                         <div class="card-body">
                             <!-- Conversations are loaded here -->
-                            <div id="divChatMessage" class="direct-chat-messages" style="height: 400px">
+                            <div id="divChatMessage" class="direct-chat-messages" style="height: 400px;">
                                 <!-- Message. Default to the left -->
                                 <div v-for="x in messages" class="direct-chat-msg">
                                     <div class="direct-chat-infos clearfix">
@@ -141,8 +141,17 @@
                                         <span class="direct-chat-timestamp float-right">{{x.DisplayTime}}</span>
                                     </div>
                                     <!-- /.direct-chat-infos -->
-                                    <div class="direct-chat-text">
+                                    <div v-if="x.MsgType == 'text'" class="direct-chat-text">
                                         {{x.Message}}
+                                    </div>
+                                    <div v-if="x.MsgType == 'file'" class="direct-chat-text">
+                                        <span>File sent: <a v-bind:href="'../res/file/' + x.Source" target="_blank">{{x.Message}}</a></span>
+                                    </div>
+                                    <div v-if="x.MsgType == 'image'" class="direct-chat-text">
+                                        <img v-bind:src="'../res/file/' + x.Source" alt="unknown image"/>
+                                    </div>
+                                    <div v-if="x.MsgType == 'audio'" class="direct-chat-text">
+                                        <audio v-bind:src="'../res/file/' + x.Source" controls></audio>
                                     </div>
                                     <!-- /.direct-chat-text -->
                                 </div>
@@ -156,6 +165,8 @@
                             <div class="input-group">
                                 <input v-model="newMessage.Message" type="text" placeholder="Type Message ..." class="form-control">
                                 <span class="input-group-append">
+                                    <button v-on:click="Record" :disabled="recorderStatus > 1" class="btn btn-danger">{{recorderStatus == 0 ? "Record" : "Stop"}}</button>
+                                    <button class="btn btn-success" data-toggle="modal" data-target="#dlgFileUpload">Upload</button>
                                     <button v-on:click="SendMessage" class="btn btn-primary">Send</button>
                                 </span>
                             </div>
@@ -184,6 +195,35 @@
     <!-- /.control-sidebar -->
 </div>
 <!-- ./wrapper -->
+<div id="dlgFileUpload" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Chat File Upload</h4>
+                <button type="button" class="close" onclick="ChatUploadFile(false)" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="formFile">
+                    <p>
+                        <input id="inputFileName" placeholder="File Name" style="width: 100%;">
+                    </p>
+                    <p>
+                        <input id="inputFile" type="file" name="file">
+                    </p>
+                </form>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <button type="button" class="btn btn-default" onclick="ChatUploadFile(false)">Close</button>
+                <button type="button" class="btn btn-primary" onclick="ChatUploadFile(true)">Upload</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal -->
 <!-- jQuery -->
 <script src="../res/plugins/jquery/jquery.min.js"></script>
 <!-- Bootstrap 4 -->
@@ -196,6 +236,7 @@
 <script type="application/javascript">
     pdfjsLib.GlobalWorkerOptions.workerSrc = '../res/plugins/pdf/pdf.worker.js';
 </script>
+<script src="../res/plugins/recorder.js/recorder.js"></script>
 
 <script src="../res/js/common.js"></script>
 <script src="../res/js/infra/sock.js"></script>

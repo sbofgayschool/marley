@@ -81,22 +81,23 @@ type Message struct {
 type Client struct {
 	sock   *websocket.Conn
 	Gid    string
+	group  *group
 	Info   interface{}
 	output *list.List
 	lock   *sync.Mutex
+}
+
+func (c *Client)GetPeerNum() int {
+	if c.group == nil {
+		return 0
+	}
+	return len(c.group.clients)
 }
 
 type group struct {
 	id      string
 	broker  chan *Message
 	clients map[*Client]bool
-}
-
-func CountGroupClient(id string) int {
-	if g, ok := groups[id]; ok {
-		return len(g.clients)
-	}
-	return 0
 }
 
 func (c *Client) send(content interface{}, broker chan *Message, counter *sync.WaitGroup) {
@@ -172,6 +173,7 @@ func (g *group) brokeMessage() {
 			if !closed {
 				if _, ok := g.clients[msg.Client]; !ok {
 					log.Printf("group %s: client %v joined\n", g.id, msg.Client)
+					msg.Client.group = g
 					g.clients[msg.Client] = true
 					counter.Add(1)
 					go msg.Client.recv(g.broker, &counter)
@@ -182,6 +184,7 @@ func (g *group) brokeMessage() {
 		case OptLeave:
 			if _, ok := g.clients[msg.Client]; ok {
 				log.Printf("group %s: client %v left\n", g.id, msg.Client)
+				msg.Client.group = nil
 				delete(g.clients, msg.Client)
 				if err := msg.Client.sock.Close(); err != nil {
 					log.Println(err)

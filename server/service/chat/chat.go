@@ -4,6 +4,7 @@ import (
 	"github.com/sbofgayschool/marley/server/infra/sock"
 	"github.com/sbofgayschool/marley/server/service/common"
 	"github.com/sbofgayschool/marley/server/service/user"
+	"github.com/sbofgayschool/marley/server/utils"
 )
 
 const (
@@ -19,6 +20,7 @@ type Chat struct {
 	Username    string
 	MsgType     string
 	Message     string
+	Source      string
 	ElapsedTime int64
 }
 
@@ -45,7 +47,7 @@ func sockHandler(msg *sock.Message, _ chan *sock.Message) (res []*sock.Message) 
 		res = append(res, &sock.Message{Client: msg.Client, Content: map[string]interface{}{
 			sock.TagField:  Tag,
 			OperationField: "numQuery",
-			"Num":          common.GetCurrentAudience(msg.Client.Gid),
+			"Num":          msg.Client.GetPeerNum(),
 		}})
 	case "message":
 		content["Username"] = u.Username
@@ -53,7 +55,7 @@ func sockHandler(msg *sock.Message, _ chan *sock.Message) (res []*sock.Message) 
 		if e, ok := content["ElapsedTime"]; ok {
 			elapsedTime = e.(int64)
 		}
-		chat := &Chat{u.Username, content["MsgType"].(string), content["Message"].(string), elapsedTime}
+		chat := &Chat{u.Username, content["MsgType"].(string), content["Message"].(string), content["Source"].(string), elapsedTime}
 		chatMessage(msg.Client.Gid, chat)
 		res = append(res, &sock.Message{Client: nil, Content: map[string]interface{}{
 			sock.TagField:  Tag,
@@ -61,6 +63,7 @@ func sockHandler(msg *sock.Message, _ chan *sock.Message) (res []*sock.Message) 
 			"Username":     chat.Username,
 			"MsgType":      chat.MsgType,
 			"Message":      chat.Message,
+			"Source":		chat.Source,
 			"ElapsedTime":  chat.ElapsedTime,
 		}})
 	}

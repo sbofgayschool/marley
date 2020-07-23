@@ -93,49 +93,6 @@
         <!-- Main content -->
         <section class="content">
             <div class="row">
-                <div class="col-md-12">
-                    <div id="divLiveOption" class="card">
-                        <div class="card-header">
-                            <h3 class="card-title">Live Options</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-2">
-                                    <label>Start/Stop</label>
-                                </div>
-                                <div class="col-2">
-                                    <label>Quality</label>
-                                </div>
-                                <div class="col-2">
-                                    <label>Special/Normal</label>
-                                </div>
-                                <div class="col-1"></div>
-                                <div class="col-5">
-                                    <label v-if="sp">PDF</label>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <button v-on:click="switchButton(on == 0)" class="col-2 btn btn-primary" :disabled="on == 1">{{!on ? "Start" : "Stop"}}</button>
-                                <div class="col-2">
-                                    <select v-model="qualities" class="form-control" :disabled="on > 0">
-                                        <option value="0">Audio only</option>
-                                        <option v-if="!sp" value="1">144p</option>
-                                        <option v-if="!sp" value="2">144p & 360p</option>
-                                        <option v-if="!sp" value="3">144p & 360p & 576p</option>
-                                    </select>
-                                </div>
-                                <button v-on:click="switchSp()" class="col-2 btn btn-primary" :disabled="on > 0">{{!sp ? "Special" : "Normal"}}</button>
-                                <div class="col-1"></div>
-                                <button v-if="sp" class="col-1 btn btn-primary" :disabled="on > 0" data-toggle="modal" data-target="#dlgPdfUpload">Upload</button>
-                                <div v-if="sp" class="col-4">
-                                    <span>{{pdf}}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="row">
                 <div class="col-md-8">
                     <div class="card card-default">
                         <div class="card-header">
@@ -143,18 +100,23 @@
                             <span id="spanAudience" style="float: right">Audience: 0</span>
                         </div>
                         <div id="divCanvasBody" class="card-body" style="padding: 0;">
-                            <video id="video" poster="../res/img/marley-map.jpg" height="400" style="width: 100%; background: #000000;" autoplay muted></video>
+                            <video id="video" poster="../res/img/marley-map.jpg" height="400" style="width: 100%; background: #000000;" muted></video>
                             <canvas id="canvasPdf" style="position: absolute; z-index: 1; display: none;"></canvas>
                             <canvas id="canvasOpt" style="position: absolute; z-index: 2; display: none;"></canvas>
                             <canvas id="canvasBg" height="400" style="display: none;"></canvas>
+                            <audio id="audio" style="width: 100%" hidden></audio>
                         </div>
-                        <div class="card-footer">
-                            <span style="float: right">
-                                <span id="spanSpNote">Controllers are not available.</span>
-                                <button id="btnSpPagePrev" onclick="SpBroadcastSetPage(false)" class="btn btn-primary" style="display: none">Previous Page</button>
-                                <button id="btnSpClean" onclick="SpAct([null, null], spCurPage, false)" class="btn btn-danger" style="display: none">Clean</button>
-                                <button id="btnSpPageNext" onclick="SpBroadcastSetPage(true)" class="btn btn-primary" style="display: none">Next Page</button>
-                            </span>
+                        <div id="divVodOption" class="card-footer">
+                            <div class="row">
+                                <div class="col-1">
+                                    <label>Quality</label>
+                                </div>
+                                <div class="col-3">
+                                    <select v-model="quality" class="form-control" v-on:change="stop(true)">
+                                        <option v-for="x in qualities" v-bind:value="x.val">{{x.tag}}</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -233,29 +195,6 @@
     <!-- /.control-sidebar -->
 </div>
 <!-- ./wrapper -->
-<div id="dlgPdfUpload" class="modal fade">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h4 class="modal-title">Pdf Upload</h4>
-                <button type="button" class="close" onclick="LiveUploadPdf(false)" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <form id="formPdf">
-                    <input id="inputPdf" type="file" name="file" accept="application/pdf">
-                </form>
-            </div>
-            <div class="modal-footer justify-content-between">
-                <button type="button" class="btn btn-default" onclick="LiveUploadPdf(false)">Close</button>
-                <button type="button" class="btn btn-primary" onclick="LiveUploadPdf(true)">Upload</button>
-            </div>
-        </div>
-        <!-- /.modal-content -->
-    </div>
-    <!-- /.modal-dialog -->
-</div>
 <div id="dlgFileUpload" class="modal fade">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -304,147 +243,36 @@
 <script src="../res/js/infra/rtc.js"></script>
 <script src="../res/js/service/chat.js"></script>
 <script type="application/javascript">
-    chatLive = true;
+    chatLive = false;
 </script>
 <script src="../res/js/service/sp.js"></script>
 <script type="application/javascript">
-    spBroadcast = true;
+    spBroadcast = null;
 </script>
-
 
 <!-- Page specified script -->
 <script type="application/javascript">
-    let liveType = "live";
-    let liveTracks = [null, null, null, null];
-    let liveOption = new Vue({
-        el: "#divLiveOption",
+    let allQualities = [
+        {val: "0", tag: "Audio Only"},
+        {val: "1", tag: "144p"},
+        {val: "2", tag: "360p"},
+        {val: "3", tag: "576p"}
+    ];
+    let vodOption = new Vue({
+        el: "#divVodOption",
         data: {
             on: 0,
-            qualities: "3",
-            sp: false,
+            quality: "3",
+            qualities: allQualities,
             pdf: "",
             timestamp: 0
-        },
-        methods: {
-            switchButton: function(status) {
-                if (status) {
-                    if (this.sp && this.pdf === "") {
-                        return
-                    }
-                    if (this.on > 0) {
-                        return;
-                    }
-                    this.on = 1;
-                    if (RTCStart(true, liveTracks, parseInt(this.qualities), LiveRTCLoadCallback, LiveRTCFailedCallback)) {
-                        return;
-                    }
-                }
-                this.stop(true);
-            },
-            start: function(timestamp) {
-                if (this.on === 2) {
-                    return;
-                }
-                this.on = 2;
-                this.timestamp = timestamp;
-                if (liveOption.sp) {
-                    SpStart(FileUrl(liveOption.pdf), [], timestamp);
-                }
-            },
-            stop: function(invoke) {
-                if (this.on === 0) {
-                    return;
-                }
-                this.on = 0;
-                this.timestamp = 0;
-                if (invoke) {
-                    RTCStopConnection();
-                }
-                if (liveOption.sp) {
-                    SpStop();
-                }
-            },
-            switchSp: function() {
-                this.sp = !this.sp;
-                if (this.sp) {
-                    this.qualities = "0";
-                    $("#video").hide();
-                    $("#canvasPdf").show();
-                    $("#canvasOpt").show();
-                    $("#canvasBg").show();
-                } else {
-                    this.qualities = "3";
-                    $("#video").show();
-                    $("#canvasPdf").hide();
-                    $("#canvasOpt").hide();
-                    $("#canvasBg").hide();
-                }
-            }
         }
     });
-
-    function LiveRTCLoadCallback(sdp, tracks) {
-        if (!SockSendMessage({
-            Type: "live",
-            Operation: "add",
-            Offer: sdp,
-            Tracks: tracks,
-            Pdf: liveOption.$data.sp ? liveOption.$data.pdf : ""
-        })) {
-            liveOption.stop(true);
-        }
-    }
-
-    function LiveRTCFailedCallback() {
-        liveOption.stop(false);
-    }
-
-    function LiveOnMessageHandler(msg) {
-        if (msg["Operation"] === "add") {
-            if (msg["Error"]) {
-                console.log(msg["Error"]);
-                liveOption.stop(true);
-            } else {
-                liveOption.start(msg["Timestamp"]);
-                rtcPC.setRemoteDescription(new RTCSessionDescription(msg["Answer"]));
-            }
-        }
-    }
-
-    function LiveUploadPdf(confirm) {
-        if (!confirm) {
-            $("#inputPdf").val("");
-            $("#dlgPdfUpload").modal("hide");
-            return;
-        }
-        Ajax(Api("file"), null, new FormData($("#formPdf")[0]), "POST", function(data) {
-            console.log(data);
-            liveOption.$data.pdf = data["File"];
-            $("#inputPdf").val("");
-            $("#dlgPdfUpload").modal("hide");
-        }, null, false);
-    }
+    let vodSource = null;
 
     $(function() {
-        navigator.mediaDevices.getUserMedia({video: {height: 576, frameRate: 19}, audio: true}).then(
-            function(stream) {
-                liveTracks[0] = stream.getAudioTracks()[0];
-                liveTracks[3] = stream.getVideoTracks()[0];
-                $("#video")[0].srcObject = stream;
-            }
-        );
-        navigator.mediaDevices.getUserMedia({video: {height: 360, frameRate: 17}, audio: true}).then(
-            function(stream) {
-                liveTracks[2] = stream.getVideoTracks()[0];
-            }
-        );
-        navigator.mediaDevices.getUserMedia({video: {height: 144, frameRate: 15}, audio: true}).then(
-            function(stream) {
-                liveTracks[1] = stream.getVideoTracks()[0];
-            }
-        );
-        sockMessageHandler[liveType] = LiveOnMessageHandler;
-        SockOpen("1");
+        // TODO: Ajax first
+        SockOpen("1-1");
     });
 </script>
 </body>

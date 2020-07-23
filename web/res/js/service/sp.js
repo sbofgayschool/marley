@@ -255,6 +255,8 @@ function SpGenerateCoord(e) {
     return [(e.clientX - bounds.left) / bounds.width, (e.clientY - bounds.top) / bounds.height];
 }
 
+// TODO: Vod Progress check and handler
+
 $(function () {
     spCanvasPdf = $("#canvasPdf")[0];
     spCanvasPdf.width = $("#divCanvasBody").width();

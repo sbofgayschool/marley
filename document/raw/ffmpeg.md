@@ -6,4 +6,6 @@ ffmpeg.exe -i .\5a6d0592-0271-4f5b-8cdf-7bc1d7fc865e.ogg out.ogg
 ffmpeg -i %s -c:v h264 -i %s -c:a aac -s %dx%d %s.mp4
 ffmpeg -i %s -c:v h264 -i %s -c:a aac -s %dx%d %s.mp4
 ffmpeg.exe -i .\5a6d0592-0271-4f5b-8cdf-7bc1d7fc865e.ogg -threads 5 out.ogg
+
+ffmpeg -i 128b230e-5f14-4c6f-94f3-638a246015db.ivf -c:v h264 -i 39602c61-db0f-40eb-a53d-b006c8babf8d.ogg -c:a aac -s 1024*576 -vsync 2 test3.mp4
 ```

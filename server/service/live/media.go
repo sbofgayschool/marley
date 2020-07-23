@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"log"
-	"time"
 
 	"github.com/pion/webrtc/v3"
 

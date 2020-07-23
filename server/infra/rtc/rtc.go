@@ -26,9 +26,9 @@ const (
 	videoClockRate  = 90000
 	audioSampleRate = 48000
 
-	ffmpegBin       = "ffmpeg.exe"
-	ffmpegThread    = "-threads"
-	ffmpegThreadNum = "5"
+	ffmpegBin       = "ffmpeg"
+	ffmpegVsync     = "-vsync"
+	ffmpegVsyncArg  = "2"
 )
 
 var qualityBitrate = []uint64{1e4, 5e5, 1e7, 5e8}
@@ -181,7 +181,7 @@ func NewPeerConnectionWriter(id string, timestamp int64, tracks []string, audioT
 				close(audioFile)
 				if localTrack != nil && localTrack.writer != nil {
 					mergedFile = mediaDir + utils.RandomString() + ".ogg"
-					if err := exec.Command(ffmpegBin, "-i", localTrack.filename, ffmpegThread, ffmpegThreadNum, mergedFile).Run(); err != nil {
+					if err := exec.Command(ffmpegBin, "-i", localTrack.filename, mergedFile).Run(); err != nil {
 						log.Println(err)
 						mergedFile = ""
 					}
@@ -191,15 +191,17 @@ func NewPeerConnectionWriter(id string, timestamp int64, tracks []string, audioT
 				if localTrack != nil && localTrack.writer != nil {
 					mergedFile = mediaDir + utils.RandomString() + ".mp4"
 					if audio == "" {
-						if err := exec.Command(ffmpegBin, "-i", localTrack.filename, "-c:v", "h264", ffmpegThread, ffmpegThreadNum, "-s",
-							fmt.Sprintf("%dx%d", qualityResolution[quality][0], qualityResolution[quality][1]), mergedFile).Run(); err != nil {
+						if err := exec.Command(ffmpegBin, "-i", localTrack.filename, "-c:v", "h264", "-s",
+							fmt.Sprintf("%dx%d", qualityResolution[quality][0], qualityResolution[quality][1]),
+							ffmpegVsync, ffmpegVsyncArg, mergedFile).Run(); err != nil {
 							log.Println(err)
 							mergedFile = ""
 						}
 					} else {
 						if err := exec.Command(ffmpegBin, "-i", localTrack.filename, "-c:v", "h264",
-							"-i", audio, "-c:a", "aac", ffmpegThread, ffmpegThreadNum, "-s",
-							fmt.Sprintf("%dx%d", qualityResolution[quality][0], qualityResolution[quality][1]), mergedFile).Run(); err != nil {
+							"-i", audio, "-c:a", "aac", "-s",
+							fmt.Sprintf("%dx%d", qualityResolution[quality][0], qualityResolution[quality][1]),
+							ffmpegVsync, ffmpegVsyncArg, mergedFile).Run(); err != nil {
 							log.Println(err)
 							mergedFile = ""
 						}

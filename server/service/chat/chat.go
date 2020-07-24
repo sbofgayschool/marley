@@ -53,7 +53,7 @@ func sockHandler(msg *sock.Message, _ chan *sock.Message) (res []*sock.Message) 
 		content["Username"] = u.Username
 		elapsedTime := utils.UnixMillion()
 		if e, ok := content["ElapsedTime"]; ok {
-			elapsedTime = e.(int64)
+			elapsedTime = int64(e.(float64))
 		}
 		chat := &Chat{u.Username, content["MsgType"].(string), content["Message"].(string), content["Source"].(string), elapsedTime}
 		chatMessage(msg.Client.Gid, chat)

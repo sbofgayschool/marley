@@ -70,7 +70,7 @@ function ChatConvertTime(time) {
         return new Date(time).toUTCString();
     } else {
         let minutes = Math.floor(time / 60000);
-        let seconds = ((time % 60000) / 1000).toFixed(0);
+        let seconds = Math.floor(((time % 60000) / 1000));
         return minutes + ":" + (seconds < 10 ? '0' : '') + seconds;
     }
 }
@@ -109,7 +109,7 @@ function ChatSearchPosition(elapsedTime) {
             r = mid;
         }
     }
-    return l === 0 ? l : l - 1;
+    return l;
 }
 
 function ChatOnMessageHandler(msg) {
@@ -170,14 +170,21 @@ function ChatUploadFile(confirm) {
 }
 
 let chatVodProgressInterval = 500;
+let chatPrvId = "";
 
 function ChatVodProgress() {
-    if (!chat.$data.autoScroll) {
+    if (!chat.$data.autoScroll || vodSource[0].paused) {
         return;
     }
     let i = ChatSearchPosition(GetSourceTime());
+    if (i > 0) {
+        i--;
+    }
     if (i < chat.$data.messages.length) {
-        $("#divChatMessage").scrollTop($("#" + chat.$data.messages[i].Id)[0].offsetTop);
+        if (chatPrvId !== chat.$data.messages[i].Id) {
+            $("#divChatMessage").scrollTop($("#" + chat.$data.messages[i].Id)[0].offsetTop);
+        }
+        chatPrvId = chat.$data.messages[i].Id;
     }
 }
 

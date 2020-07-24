@@ -170,6 +170,7 @@ func NewPeerConnectionWriter(id string, timestamp int64, tracks []string, audioT
 				}
 			}
 			mergedFile := ""
+			fileName := ""
 			if quality == 0 {
 				for i := 0; i < len(tracks)-1; i++ {
 					if localTrack != nil && localTrack.writer != nil {
@@ -180,7 +181,8 @@ func NewPeerConnectionWriter(id string, timestamp int64, tracks []string, audioT
 				}
 				close(audioFile)
 				if localTrack != nil && localTrack.writer != nil {
-					mergedFile = mediaDir + utils.RandomString() + ".ogg"
+					fileName = utils.RandomString() + ".ogg"
+					mergedFile = mediaDir + fileName
 					if err := exec.Command(ffmpegBin, "-i", localTrack.filename, mergedFile).Run(); err != nil {
 						log.Println(err)
 						mergedFile = ""
@@ -189,7 +191,8 @@ func NewPeerConnectionWriter(id string, timestamp int64, tracks []string, audioT
 			} else {
 				audio := <-audioFile
 				if localTrack != nil && localTrack.writer != nil {
-					mergedFile = mediaDir + utils.RandomString() + ".mp4"
+					fileName = utils.RandomString() + ".mp4"
+					mergedFile = mediaDir + fileName
 					if audio == "" {
 						if err := exec.Command(ffmpegBin, "-i", localTrack.filename, "-c:v", "h264", "-s",
 							fmt.Sprintf("%dx%d", qualityResolution[quality][0], qualityResolution[quality][1]),
@@ -208,7 +211,7 @@ func NewPeerConnectionWriter(id string, timestamp int64, tracks []string, audioT
 					}
 				}
 			}
-			trackDoneCallback(id, timestamp, quality, mergedFile)
+			trackDoneCallback(id, timestamp, quality, fileName)
 		}()
 		if localTrack == nil {
 			return

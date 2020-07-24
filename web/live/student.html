@@ -252,12 +252,6 @@
 
 <!-- Page specified script -->
 <script type="application/javascript">
-    let allQualities = [
-        {val: "0", tag: "Audio Only"},
-        {val: "1", tag: "144p"},
-        {val: "2", tag: "360p"},
-        {val: "3", tag: "576p"}
-    ];
     let liveOption = new Vue({
         el: "#divLiveOption",
         data: {
@@ -275,7 +269,6 @@
                 this.on = 1;
                 this.pdf = pdf;
                 this.qualities = allQualities.slice(0, qualities);
-
                 if (parseInt(this.quality) >= this.qualities.length) {
                     this.quality = this.qualities[this.qualities.length - 1].val;
                 }

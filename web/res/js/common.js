@@ -1,9 +1,24 @@
+let allQualities = [
+    {val: "0", tag: "Audio Only"},
+    {val: "1", tag: "144p"},
+    {val: "2", tag: "360p"},
+    {val: "3", tag: "576p"}
+];
+
 function Api(name) {
     return "../../api/" + name;
 }
 
 function FileUrl(file) {
     return "../res/file/" + file;
+}
+
+function MediaUrl(file) {
+    return "../res/media/" + file;
+}
+
+function GetSourceTime() {
+    return Math.floor(vodSource[0].currentTime * 1000);
 }
 
 /**

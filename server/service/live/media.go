@@ -1,6 +1,7 @@
 package live
 
 import (
+	"encoding/json"
 	"errors"
 	"github.com/sbofgayschool/marley/server/utils"
 	"sync"
@@ -25,7 +26,7 @@ type Broadcaster struct {
 	audioTimestamp *int64
 	Qualities  int
 	Pdf        string
-	operations []*operation
+	operations []*Operation
 	chats      []*chat.Chat
 }
 
@@ -40,6 +41,22 @@ func connectionDoneCallback(id string, timestamp int64) {
 		lock.Unlock()
 		// TODO: Put chat message into database.
 		// TODO: Put operations into database, if any.
+		if b.audioTimestamp == nil || *b.audioTimestamp == 0 {
+			return
+		}
+		for _, c := range b.chats {
+			c.ElapsedTime -= *b.audioTimestamp
+		}
+		for _, o := range b.operations {
+			o.ElapsedTime -= *b.audioTimestamp
+		}
+		output := make(map[string]interface{})
+		output["Pdf"] = b.Pdf
+		output["Qualities"] = []string{"0", "1", "2", "3"}
+		output["Chats"] = b.chats
+		output["Operations"] = b.operations
+		j, _ := json.MarshalIndent(output, "", "    ")
+		println(string(j))
 	} else {
 		lock.Unlock()
 	}

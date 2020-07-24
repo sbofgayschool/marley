@@ -20,7 +20,7 @@ let spBroadcastOptInterval = 50;
 
 let spVodPrevTime = -1;
 let spVodNextIndex = 0;
-let spVodProgressInterval = 50;
+let spVodProgressInterval = 145;
 
 function SpStart(pdf, opts, timestamp) {
     if (spStartTime) {
@@ -194,6 +194,9 @@ function SpDrawSeries(opts) {
     for (let i = 0; i < opts.length; i++) {
         SpChangePage(opts[i][0], opts[i][0] !== opts[opts.length - 1][0]);
         for (let j = 1; j < opts[i].length; j += 2) {
+            if (typeof(opts[i][j]) !== "object") {
+                continue;
+            }
             SpAct([opts[i][j], opts[i][j + 1]], opts[i][0], opts[i][0] !== opts[opts.length - 1][0]);
         }
     }
@@ -271,7 +274,7 @@ function SpGenerateCoord(e) {
 }
 
 function SpVodProgress() {
-    let curTime = vodSource.currentTime;
+    let curTime = GetSourceTime();
     if (curTime >= spVodPrevTime) {
         let opts = [];
         for (let i = spVodNextIndex; i < spOpts.length; i++) {

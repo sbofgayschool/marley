@@ -100,11 +100,11 @@
                             <span id="spanAudience" style="float: right">Audience: 0</span>
                         </div>
                         <div id="divCanvasBody" class="card-body" style="padding: 0;">
-                            <video id="video" poster="../res/img/marley-map.jpg" height="400" style="width: 100%; background: #000000;" muted></video>
+                            <video id="video" poster="../res/img/marley-map.jpg" height="400" style="width: 100%; background: #000000;" controls></video>
                             <canvas id="canvasPdf" style="position: absolute; z-index: 1; display: none;"></canvas>
                             <canvas id="canvasOpt" style="position: absolute; z-index: 2; display: none;"></canvas>
                             <canvas id="canvasBg" height="400" style="display: none;"></canvas>
-                            <audio id="audio" style="width: 100%" hidden></audio>
+                            <audio id="audio" style="width: 100%" style="display: none;" controls></audio>
                         </div>
                         <div id="divVodOption" class="card-footer">
                             <div class="row">
@@ -112,7 +112,7 @@
                                     <label>Quality</label>
                                 </div>
                                 <div class="col-3">
-                                    <select v-model="quality" class="form-control" v-on:change="stop(true)">
+                                    <select v-if="qualities" v-model="quality" class="form-control" v-on:change="changeQuality()">
                                         <option v-for="x in qualities" v-bind:value="x.val">{{x.tag}}</option>
                                     </select>
                                 </div>
@@ -136,7 +136,7 @@
                             <div id="divChatMessage" class="direct-chat-messages" style="height: 400px;">
                                 <!-- Message. Default to the left -->
                                 <div v-for="x in messages" class="direct-chat-msg">
-                                    <div class="direct-chat-infos clearfix">
+                                    <div v-bind:id="x.Id" class="direct-chat-infos clearfix">
                                         <span class="direct-chat-name float-left">{{x.Username}}</span>
                                         <span class="direct-chat-timestamp float-right">{{x.DisplayTime}}</span>
                                     </div>
@@ -252,27 +252,72 @@
 
 <!-- Page specified script -->
 <script type="application/javascript">
-    let allQualities = [
-        {val: "0", tag: "Audio Only"},
-        {val: "1", tag: "144p"},
-        {val: "2", tag: "360p"},
-        {val: "3", tag: "576p"}
-    ];
     let vodOption = new Vue({
         el: "#divVodOption",
         data: {
-            on: 0,
             quality: "3",
-            qualities: allQualities,
-            pdf: "",
-            timestamp: 0
+            qualities: [],
+            pdf: ""
+        },
+        methods: {
+            changeQuality : VodChangeQuality
         }
     });
     let vodSource = $("#video");
 
+    function VodChangeQuality() {
+        let elapsedTime = GetSourceTime();
+        vodSource[0].src = "";
+        if (vodOption.$data.quality === "0") {
+            $("#video").hide();
+            $("#audio").show();
+            vodSource = $("#audio");
+        } else {
+            $("#audio").hide();
+            $("#video").show();
+            vodSource = $("#video");
+        }
+        vodSource[0].src = vodOption.$data.qualities[parseInt(vodOption.$data.quality)].Url;
+        vodSource[0].load();
+        vodSource[0].onloadstart = function () {
+            vodSource[0].currentTime = elapsedTime / 1000;
+            vodSource[0].play();
+            vodSource[0].onload = null;
+        }
+    }
+
     $(function() {
-        // TODO: Ajax first to get information, then set chat messages, and start sp (if pdf is specified)
-        SockOpen("1-1");
+        Ajax(Api("vod/" + "1-1"), null, null, "GET", function(data) {
+            console.log(data);
+            vodOption.$data.pdf = data["Pdf"];
+            if (vodOption.$data.pdf) {
+                $("#canvasPdf").show();
+                $("#canvasOpt").show();
+                $("#canvasBg").show();
+            }
+            for (let i in data["Qualities"]) {
+                let q = allQualities[i];
+                q.Url = MediaUrl(data["Qualities"][i]);
+                vodOption.$data.qualities.push(q);
+            }
+            vodOption.$data.quality = vodOption.$data.qualities[vodOption.$data.qualities.length - 1].val;
+            VodChangeQuality();
+            ChatLoadMessage(data["Chats"]);
+            if (data["Pdf"]) {
+                let opts = [];
+                if (data["Operations"]) {
+                    for (let i = 0; i < data["Operations"].length; i++) {
+                        let o = JSON.parse(data["Operations"][i]["Opt"]);
+                        for (let j = 0; j < o.length; j++) {
+                            o[j].push(data["Operations"][i]["ElapsedTime"]);
+                            opts.push(o[j]);
+                        }
+                    }
+                }
+                SpStart(FileUrl(vodOption.$data.pdf), opts);
+            }
+            SockOpen("1-1");
+        }, null, true);
     });
 </script>
 </body>

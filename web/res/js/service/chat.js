@@ -69,7 +69,9 @@ function ChatConvertTime(time) {
     if (chatLive) {
         return new Date(time).toUTCString();
     } else {
-        // TODO: Convert elapsed time properly in vod mode.
+        let minutes = Math.floor(time / 60000);
+        let seconds = ((time % 60000) / 1000).toFixed(0);
+        return minutes + ":" + (seconds < 10 ? '0' : '') + seconds;
     }
 }
 
@@ -79,15 +81,35 @@ function ChatLoadMessage(messages) {
     }
     chat.$data.messages = [];
     for (let i in messages) {
-        chat.$data.messages.push({
+        let message = {
             Username: messages[i]["Username"],
             MsgType: messages[i]["MsgType"],
             Message: messages[i]["Message"],
             Source: messages[i]["Source"],
             ElapsedTime: messages[i]["ElapsedTime"],
             DisplayTime: ChatConvertTime(messages[i]["ElapsedTime"])
-        });
+        }
+        if (!chatLive) {
+            message.Id = "msg_" + chat.$data.messages.length;
+        }
+        chat.$data.messages.push(message);
     }
+    if (!chatLive) {
+        setInterval(ChatVodProgress, chatVodProgressInterval);
+    }
+}
+
+function ChatSearchPosition(elapsedTime) {
+    let l = 0, r = chat.$data.messages.length;
+    while (l < r) {
+        let mid = l + Math.floor((r - l) / 2);
+        if (chat.$data.messages[mid].ElapsedTime < elapsedTime) {
+            l = mid + 1;
+        } else {
+            r = mid;
+        }
+    }
+    return l === 0 ? l : l - 1;
 }
 
 function ChatOnMessageHandler(msg) {
@@ -100,10 +122,13 @@ function ChatOnMessageHandler(msg) {
             ElapsedTime: msg["ElapsedTime"],
             DisplayTime: ChatConvertTime(msg["ElapsedTime"])
         };
+        if (!chatLive) {
+            message.Id = "msg_" + chat.$data.messages.length;
+        }
         if (chatLive) {
             chat.$data.messages.push(message);
         } else {
-            // TODO: find the correct place and insert the message.
+            chat.$data.messages.splice(ChatSearchPosition(message.ElapsedTime), 0, message);
         }
     } else if (msg["Operation"] === "numQuery") {
         $("#spanAudience").text("Audience: " + msg["Num"]);
@@ -117,7 +142,7 @@ function ChatSendMessage(msg) {
     newMessage["Type"] = "chat";
     newMessage["Operation"] = "message";
     if (!chatLive) {
-        newMessage["ElapsedTime"] = Math.round(vodSource.currentTime * 1000);
+        newMessage["ElapsedTime"] = GetSourceTime();
     }
     SockSendMessage(newMessage);
 }
@@ -144,7 +169,17 @@ function ChatUploadFile(confirm) {
     }, null, false);
 }
 
-// TODO: Vod Progress check and handler. Scroll the message div to correct position.
+let chatVodProgressInterval = 500;
+
+function ChatVodProgress() {
+    if (!chat.$data.autoScroll) {
+        return;
+    }
+    let i = ChatSearchPosition(GetSourceTime());
+    if (i < chat.$data.messages.length) {
+        $("#divChatMessage").scrollTop($("#" + chat.$data.messages[i].Id)[0].offsetTop);
+    }
+}
 
 $(function() {
     navigator.mediaDevices.getUserMedia({video: false, audio: true}).then(

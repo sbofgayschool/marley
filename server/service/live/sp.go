@@ -11,7 +11,9 @@ type Operation struct {
 }
 
 func addOperation(id string, timestamp int64, opt string) error {
+	lock.RLock()
 	b, ok := broadcasters[id]
+	lock.RUnlock()
 	if !ok || b.Timestamp != timestamp {
 		return errors.New("broadcasting has stopped")
 	}

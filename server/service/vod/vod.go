@@ -1,0 +1,40 @@
+package vod
+
+/*
+CREATE TABLE video
+(
+    id INT NOT NULL AUTO_INCREMENT,
+    course INT NOT NULL,
+    name VARCHAR(32) NOT NULL,
+    timestamp BIG INT NOT NULL,
+    FOREIGN KEY(course) REFERENCES course(id) ON UPDATE CASCADE ON DELETE CASCADE
+);
+CREATE TABLE media
+(
+    id INT NOT NULL AUTO_INCREMENT,
+    video INT NOT NULL,
+    quality INT NOT NULL,
+    url TEXT NOT NULL,
+    FOREIGN KEY(video) REFERENCES video(id) ON UPDATE CASCADE ON DELETE CASCADE
+);
+CREATE TABLE chat
+(
+    id INT NOT NULL AUTO_INCREMENT,
+    video INT NOT NULL,
+    user INT NOT NULL,
+    msg_type TEXT,
+    message TEXT,
+    source TEXT,
+    elapsed_time BIG INT,
+    FOREIGN KEY(video) REFERENCES video(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    FOREIGN KEY(user) REFERENCES user(id) ON UPDATE CASCADE ON DELETE CASCADE
+);
+CREATE TABLE operation
+(
+    id INT NOT NULL AUTO_INCREMENT,
+    video INT NOT NULL,
+    opt TEXT,
+    elapsed_time BIG INT,
+    FOREIGN KEY(video) REFERENCES video(id) ON UPDATE CASCADE ON DELETE CASCADE
+);
+*/

@@ -22,6 +22,7 @@ type Chat struct {
 	Message     string
 	Source      string
 	ElapsedTime int64
+	uid         int
 }
 
 var liveMessageCallback func(string, *Chat)
@@ -55,7 +56,7 @@ func sockHandler(msg *sock.Message, _ chan *sock.Message) (res []*sock.Message) 
 		if e, ok := content["ElapsedTime"]; ok {
 			elapsedTime = int64(e.(float64))
 		}
-		chat := &Chat{u.Username, content["MsgType"].(string), content["Message"].(string), content["Source"].(string), elapsedTime}
+		chat := &Chat{u.Username, content["MsgType"].(string), content["Message"].(string), content["Source"].(string), elapsedTime, u.Uid}
 		chatMessage(msg.Client.Gid, chat)
 		res = append(res, &sock.Message{Client: nil, Content: map[string]interface{}{
 			sock.TagField:  Tag,

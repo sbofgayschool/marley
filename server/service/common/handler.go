@@ -5,8 +5,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/sbofgayschool/marley/server/infra/sock"
-	"github.com/sbofgayschool/marley/server/service/user"
 	"github.com/sbofgayschool/marley/server/utils"
 )
 
@@ -18,15 +16,7 @@ func RegisterHandler(engine *gin.Engine) {
 	engine.GET("api/test", func(c *gin.Context) {
 		c.String(200, "Marley server running.")
 	})
-	engine.GET("api/sock/:id", UpgradeHandler)
 	engine.POST("api/file", UploadFileHandler)
-}
-
-func UpgradeHandler(c *gin.Context) {
-	id := c.Param("id")
-	// TODO: Fetch uid from path parameters and authorize the user.
-	if err := sock.NewClient(c, id, &user.SockUser{Uid: 0, Username: "Anonymous User", Teacher: true}); err != nil {
-	}
 }
 
 func UploadFileHandler(c *gin.Context) {

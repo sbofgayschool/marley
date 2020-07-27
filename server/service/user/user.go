@@ -23,10 +23,10 @@ CREATE TABLE user
 */
 
 type User struct {
-	Id int
-	Username string
-	Teacher int
-	Note string
+	Id int `json:"Id"`
+	Username string `json:"Username"`
+	Teacher int `json:"Teacher"`
+	Note string `json:"Note"`
 }
 
 func AddUser(username string, password string, teacher int, note string) error {
@@ -41,15 +41,21 @@ func AddUser(username string, password string, teacher int, note string) error {
 	return nil
 }
 
-func GetUser(id int) (*User, string, error) {
-	stmt, err := db.DB.Prepare("SELECT (id, username, password, teacher, note) FROM user WHERE id=?")
+func GetUser(id int, username string) (*User, string, error) {
+	var arg interface{} = id
+	var condition = " WHERE id=?"
+	if username != "" {
+		arg = username
+		condition = " WHERE username=?"
+	}
+	stmt, err := db.DB.Prepare("SELECT (id, username, password, teacher, note) FROM user" + condition)
 	if err != nil {
 		return nil, "", errors.New("database error")
 	}
 	defer stmt.Close()
 	res := User{}
 	password := ""
-	if err := stmt.QueryRow(id).Scan(&res.Id, &res.Username, &password, &res.Teacher, &res.Note); err != nil {
+	if err := stmt.QueryRow(arg).Scan(&res.Id, &res.Username, &password, &res.Teacher, &res.Note); err != nil {
 		return nil, "", nil
 	}
 	return &res, password, nil
@@ -59,8 +65,8 @@ func SearchUser(username string, teacher int) ([]*User, error) {
 	condition := " WHERE 1=1"
 	var args []interface{}
 	if username != "" {
-		condition += " AND username=?"
-		args = append(args, username)
+		condition += " AND username LIKE ?"
+		args = append(args, "%"+username+"%d")
 	}
 	if teacher != -1 {
 		condition += " AND teacher=?"

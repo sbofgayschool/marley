@@ -7,4 +7,3 @@ import (
 func GetIdVodId(id string) []string {
 	return strings.Split(id, "-")
 }
-

@@ -64,7 +64,7 @@ func sockHandler(msg *sock.Message, _ chan *sock.Message) (res []*sock.Message) 
 			"Username":     chat.Username,
 			"MsgType":      chat.MsgType,
 			"Message":      chat.Message,
-			"Source":		chat.Source,
+			"Source":       chat.Source,
 			"ElapsedTime":  chat.ElapsedTime,
 		}})
 	}

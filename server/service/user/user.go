@@ -23,10 +23,10 @@ CREATE TABLE user
 */
 
 type User struct {
-	Id int `json:"Id"`
+	Id       int    `json:"Id"`
 	Username string `json:"Username"`
-	Teacher int `json:"Teacher"`
-	Note string `json:"Note"`
+	Teacher  int    `json:"Teacher"`
+	Note     string `json:"Note"`
 }
 
 func AddUser(username string, password string, teacher int, note string) error {

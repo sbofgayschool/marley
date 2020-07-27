@@ -87,7 +87,7 @@ type Client struct {
 	lock   *sync.Mutex
 }
 
-func (c *Client)GetPeerNum() int {
+func (c *Client) GetPeerNum() int {
 	if c.group == nil {
 		return 0
 	}

@@ -22,12 +22,12 @@ const (
 )
 
 type Broadcaster struct {
-	Timestamp  int64
+	Timestamp      int64
 	audioTimestamp *int64
-	Qualities  int
-	Pdf        string
-	operations []*Operation
-	chats      []*chat.Chat
+	Qualities      int
+	Pdf            string
+	operations     []*Operation
+	chats          []*chat.Chat
 }
 
 var broadcasters = make(map[string]*Broadcaster)

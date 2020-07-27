@@ -26,9 +26,9 @@ const (
 	videoClockRate  = 90000
 	audioSampleRate = 48000
 
-	ffmpegBin       = "ffmpeg"
-	ffmpegVsync     = "-vsync"
-	ffmpegVsyncArg  = "2"
+	ffmpegBin      = "ffmpeg"
+	ffmpegVsync    = "-vsync"
+	ffmpegVsyncArg = "2"
 )
 
 var qualityBitrate = []uint64{1e4, 5e5, 1e7, 5e8}

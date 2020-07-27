@@ -24,16 +24,20 @@ func UploadFileHandler(c *gin.Context) {
 	names := strings.Split(file.Filename, ".")
 	fileType := "file"
 	switch names[len(names)-1] {
-	case "jpg": fallthrough
-	case "png": fallthrough
-	case "gif": fileType = "image"
-	case "mp3": fallthrough
-	case "wav": fallthrough
-	case "ogg": fileType = "audio"
+	case "jpg":
+		fallthrough
+	case "png":
+		fallthrough
+	case "gif":
+		fileType = "image"
+	case "mp3":
+		fallthrough
+	case "wav":
+		fallthrough
+	case "ogg":
+		fileType = "audio"
 	}
 	filename := utils.RandomString() + "." + names[len(names)-1]
 	_ = c.SaveUploadedFile(file, FileUploadDir+filename)
 	c.JSON(200, gin.H{"File": filename, "Type": fileType})
 }
-
-

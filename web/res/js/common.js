@@ -21,6 +21,15 @@ function GetSourceTime() {
     return Math.floor(vodSource[0].currentTime * 1000);
 }
 
+function HandleError(e) {
+    console.log(e);
+    let str = "Status: " + e.status;
+    if (e.responseJSON) {
+        str += "\n" + "Message: " + e.responseJSON["Message"];
+    }
+    alert(str);
+}
+
 /**
  * Wrapped ajax call function
  * @param url Request url
@@ -41,7 +50,7 @@ function Ajax(url, param, data, method, success, err, json) {
         type: method,
         data: data,
         success: success ? success: function(data){},
-        error: err ? err : function(e){console.log(e);}
+        error: err ? err : HandleError
     };
     // Delete data field, if there is no http body
     // Else if the call should be in json format, encode it

@@ -18,7 +18,7 @@ var server *gin.Engine
 
 func init() {
 	server = gin.Default()
-	server.Use(sessions.Sessions("KV3", cookie.NewStore([]byte("secret"))))
+	server.Use(sessions.Sessions("marley", cookie.NewStore([]byte("secret"))))
 
 	common.RegisterHandler(server)
 	user.RegisterHandler(server)

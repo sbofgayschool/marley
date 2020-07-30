@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Marley</title>
+    <!-- Tell the browser to be responsive to screen width -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="../res/plugins/fontawesome-free/css/all.min.css">
+    <!-- Ionicons -->
+    <link rel="stylesheet" href="../res/plugins/ionicons/css/ionicons.min.css">
+    <!-- icheck bootstrap -->
+    <link rel="stylesheet" href="../res/plugins/icheck-bootstrap/icheck-bootstrap.min.css">
+    <!-- Theme style -->
+    <link rel="stylesheet" href="../res/plugins/adminlte/css/adminlte.min.css">
+    <!-- Google Font: Source Sans Pro -->
+    <link href="../res/plugins/fonts/source_sans_pro.css" rel="stylesheet">
+</head>
+<body class="hold-transition register-page">
+<div class="register-box">
+    <div class="register-logo">
+        <a href="../index/index.html">Welcome to <b>Marley</b></a>
+    </div>
+    <div class="card">
+        <div class="card-body register-card-body">
+            <p class="login-box-msg">Register</p>
+            <form id="form" class="form-group">
+                <div class="input-group mb-3">
+                    <input name="username" type="text" class="form-control" placeholder="Username">
+                    <div class="input-group-append">
+                        <div class="input-group-text">
+                            <span class="fas fa-user"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="input-group mb-3">
+                    <input id="inputPassword" name="password" type="password" class="form-control" placeholder="Password">
+                    <div class="input-group-append">
+                        <div class="input-group-text">
+                            <span class="fas fa-lock"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="input-group mb-3">
+                    <input id="inputRetypePassword" type="password" class="form-control" placeholder="Retype password">
+                    <div class="input-group-append">
+                        <div class="input-group-text">
+                            <span class="fas fa-lock"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="input-group mb-3">
+                    <select class="form-control" name="teacher">
+                        <option value="0" selected>Student</option>
+                        <option value="1">Teacher</option>
+                    </select>
+                    <div class="input-group-append">
+                        <div class="input-group-text">
+                            <span class="fas fa-user-circle"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="input-group mb-3">
+                    <textarea class="form-control" name="note" rows="6" placeholder="Note" style="padding-right: 5px"></textarea>
+                    <div class="input-group-append">
+                        <div class="input-group-text">
+                            <span class="fas fa-book"></span>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            <div class="text-center">
+                <button onclick="Register()" class="btn btn-block btn-primary">
+                    <i class="fab"></i>
+                    Sign Up
+                </button>
+                <a href="../index/index.html" class="btn btn-block btn-danger">
+                    <i class="fab"></i>
+                    Cancel
+                </a>
+            </div>
+        </div>
+        <!-- /.form-box -->
+    </div><!-- /.card -->
+</div>
+<!-- /.register-box -->
+
+<!-- jQuery -->
+<script src="../res/plugins/jquery/jquery.min.js"></script>
+<!-- Bootstrap 4 -->
+<script src="../res/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+<!-- AdminLTE App -->
+<script src="../res/plugins/adminlte/js/adminlte.min.js"></script>
+
+<script src="../res/js/common.js"></script>
+
+<script type="application/javascript">
+    function Register() {
+        if ($("#inputPassword").val() !== $("#inputRetypePassword").val()) {
+            alert("Passwords are not identical.");
+            return;
+        }
+        Ajax(Api("register"), null, new FormData($("#form")[0]), "POST", function(data) {
+            alert("Registered!");
+            window.location.href = "login.html";
+        }, null, false);
+    }
+</script>
+</body>
+</html>

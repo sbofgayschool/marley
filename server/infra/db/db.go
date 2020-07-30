@@ -16,5 +16,8 @@ func init() {
 	} else if d == nil {
 		log.Fatal("nil db generated")
 	}
+	if _, err := d.Exec("PRAGMA foreign_keys = ON"); err != nil {
+		log.Fatal(err)
+	}
 	DB = d
 }

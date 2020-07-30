@@ -41,28 +41,39 @@ func LoginHandler(c *gin.Context) {
 		c.JSON(500, gin.H{"Message": err.Error()})
 		return
 	} else if user == nil || password != p {
-		c.JSON(500, gin.H{"Message": "incorrect username or password"})
+		c.JSON(401, gin.H{"Message": "incorrect username or password"})
 		return
 	}
-	sessions.Default(c).Set("user", user)
-	sessions.Default(c).Save()
+	s := sessions.Default(c)
+	s.Set("userId", user.Id)
+	s.Set("userUsername", user.Username)
+	s.Set("userTeacher", user.Teacher)
+	s.Set("userNote", user.Note)
+	s.Save()
 	c.JSON(200, gin.H{})
 }
 
 func GetCurrentUserMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		u := sessions.Default(c).Get("user")
+		s := sessions.Default(c)
+		u := s.Get("userId")
 		if u == nil {
-			c.JSON(401, gin.H{"message": "login required"})
+			c.JSON(401, gin.H{"Message": "login required"})
 			c.Abort()
 			return
 		}
-		c.Set("user", u)
+		c.Set("user", &User{
+			Id:       u.(int),
+			Username: s.Get("userUsername").(string),
+			Teacher:  s.Get("userTeacher").(int),
+			Note:     s.Get("userNote").(string),
+		})
 	}
 }
 
 func LogoutHandler(c *gin.Context) {
-	sessions.Default(c).Delete("user")
+	sessions.Default(c).Delete("userId")
+	sessions.Default(c).Save()
 	c.JSON(200, gin.H{})
 }
 
@@ -87,17 +98,19 @@ func SetUserNoteHandler(c *gin.Context) {
 		c.JSON(500, gin.H{"Message": err.Error()})
 		return
 	}
-	user.Note = note
+	sessions.Default(c).Set("userNote", note)
+	sessions.Default(c).Save()
 	c.JSON(200, user)
 }
 
 func SetUserPasswordHandler(c *gin.Context) {
+	originalPassword := utils.GetHash(c.DefaultPostForm("originalPassword", ""))
 	password := utils.GetHash(c.DefaultPostForm("password", ""))
 	user := c.MustGet("user").(*User)
 	if _, p, err := GetUser(user.Id, ""); err != nil {
 		c.JSON(500, gin.H{"Message": err.Error()})
 		return
-	} else if p != password {
+	} else if p != originalPassword {
 		c.JSON(403, gin.H{"Message": "incorrect password"})
 		return
 	}
@@ -118,10 +131,16 @@ func SearchUserHandler(c *gin.Context) {
 }
 
 func UpgradeHandler(c *gin.Context) {
-	log.Println(sessions.Default(c).Get("user"))
 	id := c.Param("id")
-	// TODO: Fetch uid from path parameters and authorize the user.
-	if err := sock.NewClient(c, id, &SockUser{Uid: 0, Username: "Anonymous User", Teacher: true}); err != nil {
+	user := &SockUser{Uid: 0, Username: "Anonymous", Teacher: true}
+	u := sessions.Default(c).Get("userId")
+	if u != nil {
+		// TODO: see if the user is really one of the teachers of the lecture
+		user = &SockUser{Uid: u.(int), Username: sessions.Default(c).Get("userUsername").(string), Teacher: true}
+	}
+	log.Println(user)
+	if err := sock.NewClient(c, id, user); err != nil {
+		log.Println(err)
 	}
 }
 

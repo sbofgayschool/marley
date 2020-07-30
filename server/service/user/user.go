@@ -48,7 +48,7 @@ func GetUser(id int, username string) (*User, string, error) {
 		arg = username
 		condition = " WHERE username=?"
 	}
-	stmt, err := db.DB.Prepare("SELECT (id, username, password, teacher, note) FROM user" + condition)
+	stmt, err := db.DB.Prepare("SELECT id, username, password, teacher, note FROM user" + condition)
 	if err != nil {
 		return nil, "", errors.New("database error")
 	}
@@ -72,7 +72,7 @@ func SearchUser(username string, teacher int) ([]*User, error) {
 		condition += " AND teacher=?"
 		args = append(args, teacher)
 	}
-	stmt, err := db.DB.Prepare("SELECT (id, username, teacher, note) FROM user" + condition)
+	stmt, err := db.DB.Prepare("SELECT id, username, teacher, note FROM user" + condition)
 	if err != nil {
 		return nil, errors.New("database error")
 	}
@@ -97,7 +97,7 @@ func SetPassword(id int, password string) error {
 		return errors.New("database error")
 	}
 	defer stmt.Close()
-	if _, err := stmt.Exec(id, password); err != nil {
+	if _, err := stmt.Exec(password, id); err != nil {
 		return errors.New("database error")
 	}
 	return nil
@@ -109,7 +109,7 @@ func SetNote(id int, note string) error {
 		return errors.New("database error")
 	}
 	defer stmt.Close()
-	if _, err := stmt.Exec(id, note); err != nil {
+	if _, err := stmt.Exec(note, id); err != nil {
 		return errors.New("database error")
 	}
 	return nil

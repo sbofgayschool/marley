@@ -4,6 +4,7 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
+	"github.com/sbofgayschool/marley/server/service/course"
 	"github.com/sbofgayschool/marley/server/service/user"
 	"github.com/sbofgayschool/marley/server/service/vod"
 
@@ -22,6 +23,7 @@ func init() {
 
 	common.RegisterHandler(server)
 	user.RegisterHandler(server)
+	course.RegisterHandler(server)
 	vod.RegisterHandler(server)
 
 	server.Static("web", "web")

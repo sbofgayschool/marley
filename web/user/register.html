@@ -102,7 +102,7 @@
             alert("Passwords are not identical.");
             return;
         }
-        Ajax(Api("register"), null, new FormData($("#form")[0]), "POST", function(data) {
+        Ajax(Api("register"), null, new FormData($("#form")[0]), "PUT", function(data) {
             alert("Registered!");
             window.location.href = "login.html";
         }, null, false);

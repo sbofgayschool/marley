@@ -1,6 +1,7 @@
 let user = new Vue({
     el: "#user",
     data: {
+        id: "",
         username: "",
         teacher: 0,
         note: ""
@@ -17,6 +18,7 @@ function UserLogout() {
 
 function GetUser() {
     Ajax(Api("user/get"), null, null, "GET", function (data) {
+        user.$data.id = data.Id;
         user.$data.username = data.Username;
         user.$data.teacher = data.Teacher;
         user.$data.note = data.Note;

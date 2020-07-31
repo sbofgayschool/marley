@@ -83,6 +83,19 @@
                             <p>Logout</p>
                         </a>
                     </li>
+                    <li class="nav-header">Course</li>
+                    <li class="nav-item">
+                        <a href="../course/search.html" class="nav-link">
+                            <i class="nav-icon far fa-user"></i>
+                            <p>Search Course</p>
+                        </a>
+                    </li>
+                    <li v-if="teacher" class="nav-item">
+                        <a href="../course/add.html" class="nav-link">
+                            <i class="nav-icon far fa-image"></i>
+                            <p>New Course</p>
+                        </a>
+                    </li>
                 </ul>
             </nav>
             <!-- /.sidebar-menu -->
@@ -112,74 +125,40 @@
         <section class="content">
             <div class="row">
                 <div class="col-md-12">
-                    <div id="users" class="card card-primary">
+                    <div class="card card-primary">
                         <div class="card-header">
-                            <h3 class="card-title">Change Password</h3>
+                            <h3 class="card-title">Video</h3>
                         </div>
-                        <!-- /.card-header -->
-                        <div class="card-body">
-                            <div>
-                                <div class="row">
-                                    <div class="col-3"><label>Search Id</label></div>
-                                    <div class="col-3"><label>Search Username</label></div>
-                                    <div class="col-3"><label>Search Teacher</label></div>
-                                    <div class="col-3"><label>Go Search</label></div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-3"><input class="form-control" placeholder="User ID" v-model="search.id"></div>
-                                    <div class="col-3"><input class="form-control" placeholder="Username" v-model="search.username"></div>
-                                    <div class="col-3">
-                                        <select class="form-control" v-model="search.teacher">
-                                            <option value="" selected>All</option>
-                                            <option value="0">Student</option>
-                                            <option value="1">Teacher</option>
-                                        </select>
+                        <form id="form" class="form-horizontal">
+                            <div class="card-body">
+                                <div class="form-group row">
+                                    <label class="col-sm-2 col-form-label">Name</label>
+                                    <div class="col-sm-10">
+                                        <input name="name" class="form-control" placeholder="Name">
                                     </div>
-                                    <div class="col-3"><button class="btn btn-primary" v-on:click="Search(true)">Search</button></div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="col-sm-2 col-form-label">Tag</label>
+                                    <div class="col-sm-10">
+                                        <input name="tag" class="form-control" placeholder="Tag">
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="col-sm-2 col-form-label">Note</label>
+                                    <div class="col-sm-10">
+                                        <textarea name="note" class="form-control" rows="3" placeholder="Note"></textarea>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="row">
-                                <label></label>
-                            </div>
-                            <table class="table table-bordered" style="/*word-wrap:break-word; word-break:break-all;*/">
-                                <thead>
-                                <tr>
-                                    <th style="width: 10%">Id</th>
-                                    <th style="width: 25%">Username</th>
-                                    <th style="width: 25%">Teacher</th>
-                                    <th style="width: 50%">Note</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                <tr v-for="x in display">
-                                    <td>{{x.Id}}</td>
-                                    <td>{{x.Username}}</td>
-                                    <td>{{x.Teacher ? "Teacher" : "Student"}}</td>
-                                    <td>{{x.Note}}</td>
-                                </tr>
-                                <tr v-if="!display.length"><td colspan="5" style="text-align: center">No results found.</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <!-- /.card-body -->
+                        </form>
                         <div class="card-footer">
-                            <div class="row" v-if="display.length">
-                                <div class="col-1">
-                                    <label for="page">Pages:</label>
-                                </div>
-                                <div class="col-2">
-                                    <select class="form-control float-right" v-model="search.page" v-on:change="SearchChangePage()">
-                                        <option v-for="i in Array.from(Array(Math.floor(filtered.length / pageSize) + (filtered.length % pageSize ? 1 : 0)).keys())" v-bind:value="i">{{i+1}}</option>
-                                    </select>
-                                </div>
-                            </div>
+                            <button class="btn btn-primary" onclick="AddCourse()">Add Course</button>
+                            <a href="../course/search.html" class="btn btn-danger float-right">Cancel</a>
                         </div>
-                        <!-- /.card-footer -->
                     </div>
                 </div>
             </div>
         </section>
-
         <!-- /.content -->
     </div>
     <!-- /.content-wrapper -->
@@ -209,60 +188,14 @@
 
 <script src="../res/js/common.js"></script>
 <script src="../res/js/user/user.js"></script>
-<script type="application/javascript">
-    userOnload = function () {
-        Ajax(Api("user/search"), null, null, "GET", function (data) {
-            console.log(data);
-            if (!data) {
-                data = [];
-            }
-            users.$data.data = data;
-            users.Search(true);
-        });
-    }
-</script>
 <!-- Page specified script -->
 <script type="application/javascript">
-    let users = new Vue({
-        el: "#users",
-        data: {
-            search: {
-                id: "",
-                username: "",
-                teacher: "",
-                page: "0"
-            },
-            display: [],
-            filtered: [],
-            data: [],
-            pageSize: pageSize
-        },
-        methods: {
-            Search: function (change) {
-                this.filtered = [];
-                for (let i = 0; i < this.data.length; i++) {
-                    if ((!this.search.id || this.data[i]["Id"] === parseInt(this.search.id)) &&
-                        (!this.search.username || this.data[i]["Username"].indexOf(this.search.username) !== -1) &&
-                        (!this.search.teacher || this.data[i]["Teacher"] === parseInt(this.search.teacher))
-                    ) {
-                        this.filtered.push(this.data[i]);
-                    }
-                }
-                if (change) {
-                    this.search.page = "0";
-                }
-                this.SearchChangePage();
-            },
-            SearchChangePage: function () {
-                let page = parseInt(this.search.page);
-                if (page >= Math.floor(this.filtered.length / pageSize) + (this.filtered.length % pageSize ? 1 : 0)) {
-                    page = Math.max(Math.floor(this.filtered.length / pageSize) + (this.filtered.length % pageSize ? 1 : 0) - 1, 0);
-                    this.search.page = page.toString();
-                }
-                this.display = this.filtered.slice(page * pageSize, (page + 1) * pageSize);
-            }
-        }
-    });
+    function AddCourse() {
+        Ajax(Api("course/course/add"), null, new FormData($("#form")[0]), "PUT", function(data) {
+            alert("Course added!");
+            window.location.href = "./course.html&id=" + data["Id"];
+        }, null, false);
+    }
 </script>
 </body>
 </html>

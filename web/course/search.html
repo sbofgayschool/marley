@@ -83,6 +83,19 @@
                             <p>Logout</p>
                         </a>
                     </li>
+                    <li class="nav-header">Course</li>
+                    <li class="nav-item">
+                        <a href="../course/search.html" class="nav-link">
+                            <i class="nav-icon far fa-user"></i>
+                            <p>Search Course</p>
+                        </a>
+                    </li>
+                    <li v-if="teacher" class="nav-item">
+                        <a href="../course/add.html" class="nav-link">
+                            <i class="nav-icon far fa-image"></i>
+                            <p>New Course</p>
+                        </a>
+                    </li>
                 </ul>
             </nav>
             <!-- /.sidebar-menu -->
@@ -112,14 +125,83 @@
         <section class="content">
             <div class="row">
                 <div class="col-md-12">
-                    <div class="card card-default">
+                    <div id="courses" class="card card-primary">
                         <div class="card-header">
-                            <h3 class="card-title">Video</h3>
+                            <h3 class="card-title">Courses</h3>
                         </div>
+                        <!-- /.card-header -->
                         <div class="card-body">
+                            <div>
+                                <div class="row">
+                                    <div class="col-2"><label>Search Id</label></div>
+                                    <div class="col-2"><label>Search Name</label></div>
+                                    <div class="col-2"><label>Search Tag</label></div>
+                                    <div class="col-2"><label>Search Teacher</label></div>
+                                    <div class="col-2"><label>Search Relation</label></div>
+                                    <div class="col-2"><label>Go Search</label></div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-2"><input class="form-control" placeholder="Course ID" v-model="search.id"></div>
+                                    <div class="col-2"><input class="form-control" placeholder="Username" v-model="search.name"></div>
+                                    <div class="col-2"><input class="form-control" placeholder="Username" v-model="search.tag"></div>
+                                    <div class="col-2"><input class="form-control" placeholder="Username" v-model="search.teacher"></div>
+                                    <div class="col-2">
+                                        <select class="form-control" v-model="search.relation">
+                                            <option value="" selected>All</option>
+                                            <option value="1">Learning</option>
+                                            <option value="2">Teaching</option>
+                                            <option value="3">Owning</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-2"><button class="btn btn-primary" v-on:click="Search(true)">Search</button></div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <label></label>
+                            </div>
+                            <table class="table table-bordered" style="/*word-wrap:break-word; word-break:break-all;*/">
+                                <thead>
+                                <tr>
+                                    <th style="width: 10%">Id</th>
+                                    <th style="width: 20%">Name</th>
+                                    <th style="width: 20%">Tag</th>
+                                    <th style="width: 15%">Teacher</th>
+                                    <th style="width: 10%">Rate</th>
+                                    <th style="width: 10%">Relation</th>
+                                    <th style="width: 15%">Operation</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr v-for="x in display">
+                                    <td>{{x.Id}}</td>
+                                    <td>{{x.Name}}</td>
+                                    <td>{{x.Tag}}</td>
+                                    <td>{{x.OwnerUsername}}</td>
+                                    <td>{{x.Rate}}</td>
+                                    <td v-if="x.Relation===0">None</td>
+                                    <td v-if="x.Relation===1">Learning</td>
+                                    <td v-if="x.Relation===2">Teaching</td>
+                                    <td v-if="x.Relation===3">Owning</td>
+                                    <td><button v-if="x.Relation!==3" v-on:click="Subscribe(x.Id)" class="btn btn-primary">{{x.Relation ? "Unsubscribe" : "Learn"}}</button></td>
+                                </tr>
+                                <tr v-if="!display.length"><td colspan="6" style="text-align: center">No results found.</td></tr>
+                                </tbody>
+                            </table>
                         </div>
+                        <!-- /.card-body -->
                         <div class="card-footer">
+                            <div class="row" v-if="display.length">
+                                <div class="col-1">
+                                    <label for="page">Pages:</label>
+                                </div>
+                                <div class="col-2">
+                                    <select class="form-control float-right" v-model="search.page" v-on:change="SearchChangePage()">
+                                        <option v-for="i in Array.from(Array(Math.floor(filtered.length / pageSize) + (filtered.length % pageSize ? 1 : 0)).keys())" v-bind:value="i">{{i+1}}</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
+                        <!-- /.card-footer -->
                     </div>
                 </div>
             </div>
@@ -153,9 +235,75 @@
 
 <script src="../res/js/common.js"></script>
 <script src="../res/js/user/user.js"></script>
+<script type="application/javascript">
+    userOnload = function () {
+        LoadData(true);
+    }
+</script>
 <!-- Page specified script -->
 <script type="application/javascript">
-    $(function() {
+    function LoadData(resetPage) {
+        Ajax(Api("course/course/search"), null, null, "GET", function (data) {
+            console.log(data);
+            if (!data) {
+                data = [];
+            }
+            courses.$data.data = data;
+            courses.Search(resetPage);
+        });
+    }
+    let courses = new Vue({
+        el: "#courses",
+        data: {
+            search: {
+                id: "",
+                name: "",
+                tag: "",
+                teacher: "",
+                relation: "",
+                page: "0"
+            },
+            display: [],
+            filtered: [],
+            data: [],
+            pageSize: pageSize
+        },
+        methods: {
+            Subscribe: function (i) {
+                Ajax(Api("course/relation/set/" + i), null, null, "POST", function (data) {
+                    alert("Operation success.");
+                    LoadData(false);
+                });
+            },
+            Search: function (change) {
+                this.filtered = [];
+                for (let i = 0; i < this.data.length; i++) {
+                    if ((!this.search.id || this.data[i]["Id"] === parseInt(this.search.id)) &&
+                        (!this.search.name || this.data[i]["Name"].indexOf(this.search.name) !== -1) &&
+                        (!this.search.tag || this.data[i]["Tag"].indexOf(this.search.tag) !== -1) &&
+                        (!this.search.teacher || this.data[i]["OwnerUsername"].indexOf(this.search.teacher) !== -1) &&
+                        (!this.search.relation || this.data[i]["Relation"] === parseInt(this.search.relation))
+                    ) {
+                        if (this.data[i]["Owner"] === user.$data.id) {
+                            this.data[i]["Relation"] = 3;
+                        }
+                        this.filtered.push(this.data[i]);
+                    }
+                }
+                if (change) {
+                    this.search.page = "0";
+                }
+                this.SearchChangePage();
+            },
+            SearchChangePage: function () {
+                let page = parseInt(this.search.page);
+                if (page >= Math.floor(this.filtered.length / pageSize) + (this.filtered.length % pageSize ? 1 : 0)) {
+                    page = Math.max(Math.floor(this.filtered.length / pageSize) + (this.filtered.length % pageSize ? 1 : 0) - 1, 0);
+                    this.search.page = page.toString();
+                }
+                this.display = this.filtered.slice(page * pageSize, (page + 1) * pageSize);
+            }
+        }
     });
 </script>
 </body>

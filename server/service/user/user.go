@@ -2,6 +2,7 @@ package user
 
 import (
 	"errors"
+
 	"github.com/sbofgayschool/marley/server/infra/db"
 )
 
@@ -61,23 +62,13 @@ func GetUser(id int, username string) (*User, string, error) {
 	return &res, password, nil
 }
 
-func SearchUser(username string, teacher int) ([]*User, error) {
-	condition := " WHERE 1=1"
-	var args []interface{}
-	if username != "" {
-		condition += " AND username LIKE ?"
-		args = append(args, "%"+username+"%d")
-	}
-	if teacher != -1 {
-		condition += " AND teacher=?"
-		args = append(args, teacher)
-	}
-	stmt, err := db.DB.Prepare("SELECT id, username, teacher, note FROM user" + condition)
+func SearchUser() ([]*User, error) {
+	stmt, err := db.DB.Prepare("SELECT id, username, teacher, note FROM user")
 	if err != nil {
 		return nil, errors.New("database error")
 	}
 	defer stmt.Close()
-	rows, err := stmt.Query(args...)
+	rows, err := stmt.Query()
 	if err != nil {
 		return nil, errors.New("database error")
 	}

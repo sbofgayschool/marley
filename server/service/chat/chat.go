@@ -32,9 +32,9 @@ func SetLiveMessageCallback(f func(string, *Chat)) {
 }
 
 func chatMessage(id string, chat *Chat) {
-	ids := common.GetIdVodId(id)
-	if len(ids) == 1 {
-		liveMessageCallback(id, chat)
+	cid, vod := common.GetIdVodId(id)
+	if vod == "" {
+		liveMessageCallback(cid, chat)
 	} else {
 		// TODO: Put the message directly into the database.
 	}

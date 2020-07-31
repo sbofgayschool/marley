@@ -1,12 +1,12 @@
 package user
 
 import (
+	"strconv"
+
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
-	"github.com/sbofgayschool/marley/server/infra/sock"
+
 	"github.com/sbofgayschool/marley/server/utils"
-	"log"
-	"strconv"
 )
 
 func RegHandler(c *gin.Context) {
@@ -19,7 +19,7 @@ func RegHandler(c *gin.Context) {
 		c.JSON(500, gin.H{"Message": err.Error()})
 		return
 	} else if user != nil {
-		c.JSON(500, gin.H{"Message": "user with same username exists"})
+		c.JSON(409, gin.H{"Message": "user with same username exists"})
 		return
 	}
 	if err := AddUser(username, password, teacher, note); err != nil {
@@ -121,39 +121,22 @@ func SetUserPasswordHandler(c *gin.Context) {
 }
 
 func SearchUserHandler(c *gin.Context) {
-	username := c.DefaultPostForm("username", "")
-	teacher, _ := strconv.Atoi(c.DefaultPostForm("teacher", "-1"))
-	res, err := SearchUser(username, teacher)
+	res, err := SearchUser()
 	if err != nil {
 		c.JSON(500, gin.H{"Message": err.Error()})
 	}
 	c.JSON(200, res)
 }
 
-func UpgradeHandler(c *gin.Context) {
-	id := c.Param("id")
-	user := &SockUser{Uid: 0, Username: "Anonymous", Teacher: true}
-	u := sessions.Default(c).Get("userId")
-	if u != nil {
-		// TODO: see if the user is really one of the teachers of the lecture
-		user = &SockUser{Uid: u.(int), Username: sessions.Default(c).Get("userUsername").(string), Teacher: true}
-	}
-	log.Println(user)
-	if err := sock.NewClient(c, id, user); err != nil {
-		log.Println(err)
-	}
-}
-
 func RegisterHandler(engine *gin.Engine) {
-	engine.GET("api/sock/:id", UpgradeHandler)
-	engine.POST("api/register", RegHandler)
+	engine.PUT("api/register", RegHandler)
 	engine.POST("api/login", LoginHandler)
 	engine.GET("api/logout", LogoutHandler)
 
-	r := engine.Group("api/user/")
-	r.Use(GetCurrentUserMiddleware())
-	r.GET("get", GetUserHandler)
-	r.POST("note", SetUserNoteHandler)
-	r.POST("password", SetUserPasswordHandler)
-	r.GET("search", SearchUserHandler)
+	u := engine.Group("api/user/")
+	u.Use(GetCurrentUserMiddleware())
+	u.GET("get", GetUserHandler)
+	u.POST("note", SetUserNoteHandler)
+	u.POST("password", SetUserPasswordHandler)
+	u.GET("search", SearchUserHandler)
 }

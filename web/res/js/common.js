@@ -5,6 +5,8 @@ let allQualities = [
     {val: "3", tag: "576p"}
 ];
 
+let pageSize = 1;
+
 function Api(name) {
     return "../../api/" + name;
 }

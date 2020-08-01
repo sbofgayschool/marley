@@ -391,6 +391,7 @@
 
     $(function() {
         sockMessageHandler[liveType] = LiveOnMessageHandler;
+        // TODO: User real course id here
         SockOpen("1");
         setInterval(SockSendMessage, liveCheckInterval, {"Type": liveType, "Operation": "check"});
     });

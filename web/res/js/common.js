@@ -7,6 +7,17 @@ let allQualities = [
 
 let pageSize = 1;
 
+function RelationMessage(relation) {
+    if (relation === 1) {
+        return "Learning"
+    } else if (relation === 2) {
+        return "Teaching"
+    } else if (relation === 3) {
+        return "Owning"
+    }
+    return ""
+}
+
 function Api(name) {
     return "../../api/" + name;
 }

@@ -125,35 +125,131 @@
         <section class="content">
             <div class="row">
                 <div class="col-md-12">
-                    <div class="card card-primary">
+                    <div id="info" class="card card-primary">
                         <div class="card-header">
-                            <h3 class="card-title">Video</h3>
+                            <h3 class="card-title">Course Info</h3>
                         </div>
-                        <form id="form" class="form-horizontal">
-                            <div class="card-body">
-                                <div class="form-group row">
-                                    <label class="col-sm-2 col-form-label">Name</label>
-                                    <div class="col-sm-10">
-                                        <input name="name" class="form-control" placeholder="Name">
-                                    </div>
+                        <div class="card-body">
+                            <h2>{{name}}</h2>
+                            <dt>{{tag}}</dt>
+                            <dd>{{note}}</dd>
+                        </div>
+                        <div class="card-footer">
+                            <button v-if="relation==3" class="btn btn-primary" data-toggle="modal" data-target="#dlgSetInfo">Set Info</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div id="info" class="card card-primary">
+                        <div class="card-header">
+                            <h3 class="card-title">Operation</h3>
+                            <span id="spanAudience" style="float: right">Current Relation: {{relationMessage}}</span>
+                        </div>
+                        <div class="card-body">
+                            <button class="btn btn-primary">Watch Live Video</button>
+                            <button class="btn btn-primary">Broadcast Live Video</button>
+                            <button class="btn btn-primary">Watch Video on Demand</button>
+                            <button class="btn btn-primary">Go to Forum</button>
+                            <button class="btn btn-primary">Learning</button>
+                            <button class="btn btn-primary">Unsubscribe</button>
+                        </div>
+                        <div class="card-footer">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div id="users" class="card card-primary">
+                        <div class="card-header">
+                            <h3 class="card-title">Users</h3>
+                        </div>
+                        <!-- /.card-header -->
+                        <div class="card-body">
+                            <div>
+                                <div class="row">
+                                    <div class="col-3"><label>Search Id</label></div>
+                                    <div class="col-3"><label>Search Username</label></div>
+                                    <div class="col-3"><label>Search Teacher</label></div>
+                                    <div class="col-3"><label>Go Search</label></div>
                                 </div>
-                                <div class="form-group row">
-                                    <label class="col-sm-2 col-form-label">Tag</label>
-                                    <div class="col-sm-10">
-                                        <input name="tag" class="form-control" placeholder="Tag">
+                                <div class="row">
+                                    <div class="col-3"><input class="form-control" placeholder="User ID" v-model="search.id"></div>
+                                    <div class="col-3"><input class="form-control" placeholder="Username" v-model="search.username"></div>
+                                    <div class="col-3">
+                                        <select class="form-control" v-model="search.teacher">
+                                            <option value="" selected>All</option>
+                                            <option value="0">Student</option>
+                                            <option value="1">Teacher</option>
+                                        </select>
                                     </div>
-                                </div>
-                                <div class="form-group row">
-                                    <label class="col-sm-2 col-form-label">Note</label>
-                                    <div class="col-sm-10">
-                                        <textarea name="note" class="form-control" rows="3" placeholder="Note"></textarea>
-                                    </div>
+                                    <div class="col-3"><button class="btn btn-primary" v-on:click="Search(true)">Search</button></div>
                                 </div>
                             </div>
-                        </form>
+                            <div class="row">
+                                <label></label>
+                            </div>
+                            <table class="table table-bordered" style="/*word-wrap:break-word; word-break:break-all;*/">
+                                <thead>
+                                <tr>
+                                    <th style="width: 10%">Id</th>
+                                    <th style="width: 25%">Username</th>
+                                    <th style="width: 25%">Teacher</th>
+                                    <th style="width: 50%">Note</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr v-for="x in display">
+                                    <td>{{x.Id}}</td>
+                                    <td>{{x.Username}}</td>
+                                    <td>{{x.Teacher ? "Teacher" : "Student"}}</td>
+                                    <td>{{x.Note}}</td>
+                                </tr>
+                                <tr v-if="!display.length"><td colspan="5" style="text-align: center">No results found.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- /.card-body -->
                         <div class="card-footer">
-                            <button class="btn btn-primary" onclick="AddCourse()">Add Course</button>
-                            <a href="../course/search.html" class="btn btn-danger float-right">Cancel</a>
+                            <div class="row" v-if="display.length">
+                                <div class="col-1">
+                                    <label for="page">Pages:</label>
+                                </div>
+                                <div class="col-2">
+                                    <select class="form-control float-right" v-model="search.page" v-on:change="SearchChangePage()">
+                                        <option v-for="i in Array.from(Array(Math.floor(filtered.length / pageSize) + (filtered.length % pageSize ? 1 : 0)).keys())" v-bind:value="i">{{i+1}}</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- /.card-footer -->
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div id="info" class="card card-primary">
+                        <div class="card-header">
+                            <h3 class="card-title">Comments</h3>
+                        </div>
+                        <div class="card-body">
+                        </div>
+                        <div class="card-footer">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div id="info" class="card card-primary">
+                        <div class="card-header">
+                            <h3 class="card-title">New Comment</h3>
+                        </div>
+                        <div class="card-body">
+                        </div>
+                        <div class="card-footer">
                         </div>
                     </div>
                 </div>
@@ -177,6 +273,34 @@
     <!-- /.control-sidebar -->
 </div>
 <!-- ./wrapper -->
+<div id="dlgSetInfo" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Info Set Upload</h4>
+                <button type="button" class="close" onclick="SetInfo(false)" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="formInfo">
+                    <p>
+                        <input id="inputTag" name="tag" class="form-control" placeholder="Tag">
+                    </p>
+                    <p>
+                        <textarea id="textNote" name="note" class="form-control" rows="3" placeholder="Note"></textarea>
+                    </p>
+                </form>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <button type="button" class="btn btn-default" onclick="SetInfo(false)">Close</button>
+                <button type="button" class="btn btn-primary" onclick="SetInfo(true)">Upload</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
 <!-- jQuery -->
 <script src="../res/plugins/jquery/jquery.min.js"></script>
 <!-- Bootstrap 4 -->

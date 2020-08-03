@@ -57,6 +57,7 @@ type Relation struct {
 	Course   int    `json:"Course"`
 	User     int    `json:"User"`
 	Username string `json:"Username"`
+	Teacher  int    `json:"Teacher"`
 	Relation int    `json:"Relation"`
 }
 
@@ -131,7 +132,7 @@ func SetCourse(id int, tag string, note string) error {
 }
 
 func SearchRelation(course int) ([]*Relation, error) {
-	stmt, err := db.DB.Prepare("SELECT relation.course, relation.user, user.username, relation.relation FROM relation JOIN user ON relation.user=user.id")
+	stmt, err := db.DB.Prepare("SELECT relation.course, relation.user, user.username, user.teacher, IFNULL(relation.relation, 0) FROM (SELECT * FROM relation WHERE course=?) RIGHT JOIN user ON relation.user=user.id")
 	if err != nil {
 		return nil, errors.New("database error")
 	}
@@ -144,7 +145,7 @@ func SearchRelation(course int) ([]*Relation, error) {
 	var res []*Relation
 	for rows.Next() {
 		r := Relation{}
-		rows.Scan(&r.Course, &r.User, &r.Username, &r.Relation)
+		rows.Scan(&r.Course, &r.User, &r.Username, &r.Teacher, &r.Relation)
 		res = append(res, &r)
 	}
 	return res, nil

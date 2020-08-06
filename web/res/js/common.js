@@ -5,7 +5,7 @@ let allQualities = [
     {val: "3", tag: "576p"}
 ];
 
-let pageSize = 1;
+let pageSize = 2;
 
 function RelationMessage(relation) {
     if (relation === 1) {

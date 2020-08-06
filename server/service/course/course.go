@@ -120,7 +120,7 @@ func SearchCourse(user int) ([]*Course, error) {
 }
 
 func SetCourse(id int, tag string, note string) error {
-	stmt, err := db.DB.Prepare("UPDATE user SET tag=?, note=? WHERE id=?")
+	stmt, err := db.DB.Prepare("UPDATE course SET tag=?, note=? WHERE id=?")
 	if err != nil {
 		return errors.New("database error")
 	}
@@ -132,13 +132,26 @@ func SetCourse(id int, tag string, note string) error {
 }
 
 func SearchRelation(course int) ([]*Relation, error) {
-	stmt, err := db.DB.Prepare("SELECT relation.course, relation.user, user.username, user.teacher, IFNULL(relation.relation, 0) FROM (SELECT * FROM relation WHERE course=?) RIGHT JOIN user ON relation.user=user.id")
+	stmtOwner, err := db.DB.Prepare("SELECT course.owner FROM course WHERE course.id=?")
 	if err != nil {
+		log.Println(err)
+		return nil, errors.New("database error")
+	}
+	defer stmtOwner.Close()
+	var owner int
+	if err := stmtOwner.QueryRow(course).Scan(&owner); err != nil {
+		log.Println(err)
+		return nil, nil
+	}
+	stmt, err := db.DB.Prepare("SELECT IFNULL(relation.course, ?), user.Id, user.username, user.teacher, IFNULL(relation.relation, 0) FROM user LEFT JOIN (SELECT * FROM relation WHERE course=?) AS relation ON relation.user=user.id")
+	if err != nil {
+		log.Println(err)
 		return nil, errors.New("database error")
 	}
 	defer stmt.Close()
-	rows, err := stmt.Query(course)
+	rows, err := stmt.Query(course, course)
 	if err != nil {
+		log.Println(err)
 		return nil, errors.New("database error")
 	}
 	defer rows.Close()
@@ -146,6 +159,9 @@ func SearchRelation(course int) ([]*Relation, error) {
 	for rows.Next() {
 		r := Relation{}
 		rows.Scan(&r.Course, &r.User, &r.Username, &r.Teacher, &r.Relation)
+		if r.User == owner {
+			r.Relation = 3
+		}
 		res = append(res, &r)
 	}
 	return res, nil

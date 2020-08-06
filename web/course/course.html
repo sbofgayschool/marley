@@ -133,6 +133,7 @@
                             <h2>{{name}}</h2>
                             <dl>
                                 <dt>{{tag}}</dt>
+                                <dt>{{ownerUsername}}</dt>
                                 <dd>{{note}}</dd>
                             </dl>
                         </div>
@@ -150,12 +151,11 @@
                             <span id="spanAudience" style="float: right">Current Relation: {{relationMessage}}</span>
                         </div>
                         <div class="card-body">
-                            <button class="btn btn-primary">Watch Live Video</button>
-                            <button class="btn btn-primary">Broadcast Live Video</button>
-                            <button class="btn btn-primary">Watch Video on Demand</button>
-                            <button class="btn btn-primary">Go to Forum</button>
-                            <button class="btn btn-primary">Learning</button>
-                            <button class="btn btn-primary">Unsubscribe</button>
+                            <a v-bind:href="'../vod/vod.html?id='+id" class="btn btn-primary">Watch Live Video</a>
+                            <a v-bind:href="'../vod/vod.html?id='+id" class="btn btn-primary" v-if="relation >= 2">Broadcast Live Video</a>
+                            <a v-bind:href="'../vod/vod.html?id='+id" class="btn btn-primary">Watch Video on Demand</a>
+                            <a v-bind:href="'../forum/.html?id='+id" class="btn btn-primary">Go to Forum</a>
+                            <button v-if="relation!==3" v-on:click="Subscribe()" class="btn btn-primary">{{relation ? "Unsubscribe" : "Learn"}}</button></td>
                         </div>
                         <div class="card-footer">
                         </div>
@@ -172,14 +172,22 @@
                         <div class="card-body">
                             <div>
                                 <div class="row">
-                                    <div class="col-3"><label>Search Id</label></div>
-                                    <div class="col-3"><label>Search Username</label></div>
+                                    <div class="col-2"><label>Search Id</label></div>
+                                    <div class="col-2"><label>Search Username</label></div>
+                                    <div class="col-3"><label>Search Teacher</label></div>
                                     <div class="col-3"><label>Search Relation</label></div>
-                                    <div class="col-3"><label>Go Search</label></div>
+                                    <div class="col-2"><label>Go Search</label></div>
                                 </div>
                                 <div class="row">
-                                    <div class="col-3"><input class="form-control" placeholder="User ID" v-model="search.id"></div>
-                                    <div class="col-3"><input class="form-control" placeholder="Username" v-model="search.username"></div>
+                                    <div class="col-2"><input class="form-control" placeholder="User ID" v-model="search.id"></div>
+                                    <div class="col-2"><input class="form-control" placeholder="Username" v-model="search.username"></div>
+                                    <div class="col-3">
+                                        <select class="form-control" v-model="search.teacher">
+                                            <option value="" selected>All</option>
+                                            <option value="0">Student</option>
+                                            <option value="1">Teacher</option>
+                                        </select>
+                                    </div>
                                     <div class="col-3">
                                         <select class="form-control" v-model="search.relation">
                                             <option value="" selected>All</option>
@@ -189,7 +197,7 @@
                                             <option value="3">Owning</option>
                                         </select>
                                     </div>
-                                    <div class="col-3"><button class="btn btn-primary" v-on:click="Search(true)">Search</button></div>
+                                    <div class="col-2"><button class="btn btn-primary" v-on:click="Search(true)">Search</button></div>
                                 </div>
                             </div>
                             <div class="row">
@@ -199,19 +207,21 @@
                                 <thead>
                                 <tr>
                                     <th style="width: 10%">Id</th>
-                                    <th style="width: 30%">Username</th>
-                                    <th style="width: 30%">Relation</th>
-                                    <th style="width: 30%">Operation</th>
+                                    <th style="width: 20%">Username</th>
+                                    <th style="width: 20%">Relation</th>
+                                    <th style="width: 20%">Teacher</th>
+                                    <th style="width: 20%">Operation</th>
                                 </tr>
                                 </thead>
                                 <tbody>
                                 <tr v-for="x in display">
                                     <td>{{x.Id}}</td>
                                     <td>{{x.Username}}</td>
+                                    <td>{{x.Teacher ? "Teacher" : "Student"}}</td>
                                     <td>{{x.RelationMessage}}</td>
-                                    <td><button v-if="owner" class="btn btn-primary" v-on:click="ChangeRelation(x.Id)"></button></td>
+                                    <td><button v-if="(owner && x.Id != uid) || (!owner && x.Id == uid)" class="btn btn-primary" v-on:click="Subscribe(x.Id)">{{x.Relation ? "Remove" : "Invite"}}</button></td>
                                 </tr>
-                                <tr v-if="!display.length"><td colspan="4" style="text-align: center">No results found.</td></tr>
+                                <tr v-if="!display.length"><td colspan="5" style="text-align: center">No results found.</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -232,16 +242,17 @@
                     </div>
                 </div>
             </div>
-            <div class="row">
+            <div id="comments" v-if="filtered.length > 0" class="row">
                 <div class="col-md-12">
-                    <div id="comments" class="card card-primary">
+                    <div class="card card-primary">
                         <div class="card-header">
                             <h3 class="card-title">Comments</h3>
                         </div>
                         <div class="card-body">
                             <dl v-for="x in display">
-                                <dt>{{x.title}}</dt>
-                                <dd>{{x.content}}</dd>
+                                <dt>{{x.Title}}&nbsp;&nbsp;<a v-if="x.User == uid" href="javascript:void(0);" v-on:click="Delete()">Delete</a></dt>
+
+                                <dd>{{x.Comment}}</dd>
                             </dl>
                         </div>
                         <div class="card-footer">
@@ -265,7 +276,7 @@
                         <div class="card-header">
                             <h3 class="card-title">New Comment</h3>
                         </div>
-                        <form id="form" class="form-horizontal">
+                        <form id="formComment" class="form-horizontal">
                             <div class="card-body">
                                 <div class="form-group row">
                                     <label class="col-sm-2 col-form-label">Rate</label>
@@ -288,7 +299,7 @@
                             </div>
                         </form>
                         <div class="card-footer">
-                            <button class="btn btn-primary" onclick="AddCourse()">Add Course</button>
+                            <button class="btn btn-primary" onclick="AddComment()">Add Comment</button>
                             <button class="btn btn-primary float-right" onclick="$('#textComment').val('');$('#selectRate').val('5');">Clear</button>
                         </div>
                     </div>
@@ -334,7 +345,7 @@
             </div>
             <div class="modal-footer justify-content-between">
                 <button type="button" class="btn btn-default" onclick="SetInfo(false)">Close</button>
-                <button type="button" class="btn btn-primary" onclick="SetInfo(true)">Upload</button>
+                <button type="button" class="btn btn-primary" onclick="SetInfo(true)">Commit</button>
             </div>
         </div>
         <!-- /.modal-content -->
@@ -349,15 +360,203 @@
 <script src="../res/plugins/adminlte/js/adminlte.js"></script>
 <!-- Vue -->
 <script src="../res/plugins/vue/vue.js"></script>
+<script src="../res/plugins/vue/vue-router.min.js"></script>
 
 <script src="../res/js/common.js"></script>
 <script src="../res/js/user/user.js"></script>
+<script type="application/javascript">
+    userOnload = function () {
+        users.$data.uid = user.$data.id;
+        comments.$data.uid = user.$data.id;
+        LoadInfo();
+        LoadUser();
+        LoadComment();
+    }
+</script>
 <!-- Page specified script -->
 <script type="application/javascript">
-    function AddCourse() {
-        Ajax(Api("course/course/add"), null, new FormData($("#form")[0]), "PUT", function(data) {
-            alert("Course added!");
-            window.location.href = "./course.html&id=" + data["Id"];
+    let router = new VueRouter({
+        mode: "history",
+        routes: []
+    });
+    let info = new Vue({
+        el: "#info",
+        data: {
+            name: "",
+            tag: "",
+            note: "",
+            relation: "",
+            ownerUsername: ""
+        }
+    });
+    let operation = new Vue({
+        router,
+        el: "#operation",
+        data: {
+            id: 0,
+            relation: 0,
+            relationMessage: "",
+        },
+        methods: {
+            Subscribe: function () {
+                Ajax(Api("course/relation/set/" + this.id), null, null, "POST", function (data) {
+                    alert("Operation success.");
+                    LoadInfo();
+                    LoadUser();
+                });
+            }
+        },
+        mounted: function() {
+            this.$data.id = this.$route.query.id;
+        }
+    });
+    let users = new Vue({
+        el: "#users",
+        data: {
+            owner: false,
+            uid: 0,
+            search: {
+                id: "",
+                username: "",
+                teacher: "",
+                relation: "",
+                page: "0"
+            },
+            display: [],
+            filtered: [],
+            data: [],
+            pageSize: pageSize
+        },
+        methods: {
+            Subscribe: function (i) {
+                let form = null;
+                if (this.owner) {
+                    form = new FormData();
+                    form.append("user", i);
+                }
+                Ajax(Api("course/relation/set/" + operation.$data.id), null, form, "POST", function (data) {
+                    alert("Operation success.");
+                    LoadInfo();
+                    LoadUser();
+                }, null, false);
+            },
+            Search: function (change) {
+                this.filtered = [];
+                for (let i = 0; i < this.data.length; i++) {
+                    if ((!this.search.id || this.data[i]["Id"] === parseInt(this.search.id)) &&
+                        (!this.search.username || this.data[i]["Username"].indexOf(this.search.username) !== -1) &&
+                        (!this.search.teacher || this.data[i]["Teacher"] === parseInt(this.search.teacher)) &&
+                        (!this.search.relation || this.data[i]["Relation"] === parseInt(this.search.relation))
+                    ) {
+                        this.filtered.push(this.data[i]);
+                    }
+                }
+                if (change) {
+                    this.search.page = "0";
+                }
+                this.SearchChangePage();
+            },
+            SearchChangePage: function () {
+                let page = parseInt(this.search.page);
+                if (page >= Math.floor(this.filtered.length / pageSize) + (this.filtered.length % pageSize ? 1 : 0)) {
+                    page = Math.max(Math.floor(this.filtered.length / pageSize) + (this.filtered.length % pageSize ? 1 : 0) - 1, 0);
+                    this.search.page = page.toString();
+                }
+                this.display = this.filtered.slice(page * pageSize, (page + 1) * pageSize);
+            }
+        }
+    });
+    let comments = new Vue({
+        el: "#comments",
+        data: {
+            uid: 0,
+            search: {
+                page: "0"
+            },
+            display: [],
+            filtered: [],
+            pageSize: pageSize
+        },
+        methods: {
+            Delete: function () {
+                Ajax(Api("course/comment/delete/" + operation.$data.id), null, null, "DELETE", function (data) {
+                    alert("Operation success.");
+                    LoadComment();
+                });
+            },
+            SearchChangePage: function () {
+                let page = parseInt(this.search.page);
+                if (page >= Math.floor(this.filtered.length / pageSize) + (this.filtered.length % pageSize ? 1 : 0)) {
+                    page = Math.max(Math.floor(this.filtered.length / pageSize) + (this.filtered.length % pageSize ? 1 : 0) - 1, 0);
+                    this.search.page = page.toString();
+                }
+                this.display = this.filtered.slice(page * pageSize, (page + 1) * pageSize);
+            }
+        }
+    });
+    function LoadInfo() {
+        Ajax(Api("course/course/get/" + operation.$data.id), null, null, "GET", function (data) {
+            info.$data.name = data.Name;
+            info.$data.ownerUsername = data.OwnerUsername;
+            info.$data.tag = data.Tag;
+            info.$data.note = data.Note;
+            info.$data.relation = data.Owner === user.$data.id ? 3 : data.Relation;
+
+            operation.$data.relation = info.$data.relation;
+            operation.$data.relationMessage = RelationMessage(info.$data.relation);
+
+            users.$data.owner = data.Owner === user.$data.id;
+
+            $("#inputTag").val(info.$data.tag);
+            $("#textNote").val(info.$data.note);
+        });
+    }
+    function LoadUser() {
+        Ajax(Api("course/relation/search/" + operation.$data.id), null, null, "GET", function (data) {
+            console.log(data);
+            if (!data) {
+                data = [];
+            }
+            for (let i = 0; i < data.length; i++) {
+                data[i]["Id"] = data[i]["User"];
+                data[i]["RelationMessage"] = RelationMessage(data[i].Relation);
+            }
+            users.$data.data = data;
+            users.Search(false);
+        });
+    }
+    function LoadComment() {
+        Ajax(Api("course/comment/search/" + operation.$data.id), null, null, "GET", function (data) {
+            console.log(data);
+            if (!data) {
+                data = [];
+            }
+            for (let i = 0; i < data.length; i++) {
+                data[i]["Title"] = data[i]["Username"] + " - " + data[i]["Rate"] + " - " + new Date(data[i]["Time"]).toUTCString();
+            }
+            comments.$data.filtered = data;
+            comments.SearchChangePage();
+        });
+    }
+    function AddComment() {
+        Ajax(Api("course/comment/add/" + operation.$data.id), null, new FormData($("#formComment")[0]), "PUT", function(data) {
+            alert("Comment added!");
+            $("#selectRate").val("5");
+            $("#textComment").val("");
+            LoadComment();
+        }, null, false);
+    }
+    function SetInfo(confirm) {
+        if (!confirm) {
+            $("#inputTag").val(info.$data.tag);
+            $("#textNote").val(info.$data.note);
+            $("#dlgSetInfo").modal("hide");
+            return;
+        }
+        Ajax(Api("course/course/set/" + operation.$data.id), null, new FormData($("#formInfo")[0]), "POST", function(data) {
+            alert("Information set!");
+            LoadInfo();
+            $("#dlgSetInfo").modal("hide");
         }, null, false);
     }
 </script>

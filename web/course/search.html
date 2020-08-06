@@ -174,7 +174,7 @@
                                 <tbody>
                                 <tr v-for="x in display">
                                     <td>{{x.Id}}</td>
-                                    <td>{{x.Name}}</td>
+                                    <td><a v-bind:href="'../course/course.html?id='+ x.Id">{{x.Name}}</a></td>
                                     <td>{{x.Tag}}</td>
                                     <td>{{x.OwnerUsername}}</td>
                                     <td>{{x.Rate}}</td>
@@ -237,21 +237,11 @@
 <script src="../res/js/user/user.js"></script>
 <script type="application/javascript">
     userOnload = function () {
-        LoadData(true);
+        LoadData();
     }
 </script>
 <!-- Page specified script -->
 <script type="application/javascript">
-    function LoadData(resetPage) {
-        Ajax(Api("course/course/search"), null, null, "GET", function (data) {
-            console.log(data);
-            if (!data) {
-                data = [];
-            }
-            courses.$data.data = data;
-            courses.Search(resetPage);
-        });
-    }
     let courses = new Vue({
         el: "#courses",
         data: {
@@ -272,7 +262,7 @@
             Subscribe: function (i) {
                 Ajax(Api("course/relation/set/" + i), null, null, "POST", function (data) {
                     alert("Operation success.");
-                    LoadData(false);
+                    LoadData();
                 });
             },
             Search: function (change) {
@@ -305,6 +295,16 @@
             }
         }
     });
+    function LoadData() {
+        Ajax(Api("course/course/search"), null, null, "GET", function (data) {
+            console.log(data);
+            if (!data) {
+                data = [];
+            }
+            courses.$data.data = data;
+            courses.Search(false);
+        });
+    }
 </script>
 </body>
 </html>

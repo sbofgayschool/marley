@@ -193,7 +193,7 @@
     function AddCourse() {
         Ajax(Api("course/course/add"), null, new FormData($("#form")[0]), "PUT", function(data) {
             alert("Course added!");
-            window.location.href = "./course.html&id=" + data["Id"];
+            window.location.href = "../course/course.html?id=" + data["Id"];
         }, null, false);
     }
 </script>

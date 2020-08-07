@@ -96,6 +96,9 @@ func GetCourse(id int, user int) (*Course, error) {
 		log.Println(err)
 		return nil, nil
 	}
+	if res.Owner == user {
+		res.Relation = 3
+	}
 	return &res, nil
 }
 

@@ -1,6 +1,7 @@
 package course
 
 import (
+    "github.com/sbofgayschool/marley/server/service/common"
     "log"
     "strconv"
 
@@ -15,13 +16,12 @@ func UpgradeHandler(c *gin.Context) {
     u := c.MustGet("user").(*user.User)
     log.Println(u)
     id := c.Param("id")
-    /*
     cid, _ := common.GetIdVodId(id)
     cidInt, _ := strconv.Atoi(cid)
     course, _ := GetCourse(cidInt, u.Id)
     teacher := course.Owner == u.Id || course.Relation == 2
-    */
-    teacher := true
+    log.Println(course)
+    log.Println(teacher)
     if err := sock.NewClient(c, id, &user.SockUser{Uid: u.Id, Username: u.Username, Teacher: teacher}); err != nil {
         log.Println(err)
     }

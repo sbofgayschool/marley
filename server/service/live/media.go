@@ -164,7 +164,7 @@ func sockHandler(msg *sock.Message, broker chan *sock.Message) (res []*sock.Mess
 		} else {
 			res = append(res, &sock.Message{Client: msg.Client, Content: map[string]interface{}{
 				sock.TagField:  Tag,
-				OperationField: "join",
+				OperationField: "add",
 				"Answer":       "",
 				"Timestamp":    -1,
 				"Error":        "access denied",

@@ -151,10 +151,10 @@
                             <span id="spanAudience" style="float: right">Current Relation: {{relationMessage}}</span>
                         </div>
                         <div class="card-body">
-                            <a v-bind:href="'../vod/vod.html?id='+id" class="btn btn-primary">Watch Live Video</a>
-                            <a v-bind:href="'../vod/vod.html?id='+id" class="btn btn-primary" v-if="relation >= 2">Broadcast Live Video</a>
-                            <a v-bind:href="'../vod/vod.html?id='+id" class="btn btn-primary">Watch Video on Demand</a>
-                            <a v-bind:href="'../forum/.html?id='+id" class="btn btn-primary">Go to Forum</a>
+                            <a v-bind:href="'../live/student.html?id='+id" class="btn btn-primary">Watch Live Video</a>
+                            <a v-bind:href="'../live/teacher.html?id='+id" class="btn btn-primary" v-if="relation >= 2">Broadcast Live Video</a>
+                            <a v-bind:href="'../vod/search.html?id='+id" class="btn btn-primary">Watch Video on Demand</a>
+                            <a v-bind:href="'../forum/search.html?course='+id" class="btn btn-primary">Go to Forum</a>
                             <button v-if="relation!==3" v-on:click="Subscribe()" class="btn btn-primary">{{relation ? "Unsubscribe" : "Learn"}}</button></td>
                         </div>
                         <div class="card-footer">
@@ -251,7 +251,6 @@
                         <div class="card-body">
                             <dl v-for="x in display">
                                 <dt>{{x.Title}}&nbsp;&nbsp;<a v-if="x.User == uid" href="javascript:void(0);" v-on:click="Delete()">Delete</a></dt>
-
                                 <dd>{{x.Comment}}</dd>
                             </dl>
                         </div>
@@ -328,7 +327,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h4 class="modal-title">Info Set Upload</h4>
+                <h4 class="modal-title">Info Set</h4>
                 <button type="button" class="close" onclick="SetInfo(false)" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>

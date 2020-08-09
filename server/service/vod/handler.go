@@ -54,7 +54,7 @@ func GetVideoHandler(c *gin.Context) {
 			vod["Video"] = video
 		}
 		if media, err := SearchMedia(id); err != nil {
-			c.JSON(500, gin.H{"Message": "search media " +  err.Error()})
+			c.JSON(500, gin.H{"Message": "search media " + err.Error()})
 			return
 		} else {
 			qualities := []string{"", "", "", ""}

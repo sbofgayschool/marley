@@ -149,6 +149,7 @@ function ChatSendMessage(msg) {
 
 function ChatUploadFile(confirm) {
     if (!confirm) {
+        $("#inputFileName").val("");
         $("#inputFile").val("");
         $("#dlgFileUpload").modal("hide");
         return;

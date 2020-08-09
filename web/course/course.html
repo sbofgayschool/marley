@@ -25,8 +25,8 @@
         <!-- Right navbar links -->
         <ul class="navbar-nav ml-auto">
             <li class="nav-item">
-                <a class="nav-link" href="#" role="button">
-                    <i class="fas fa-th-large"></i>
+                <a class="nav-link" href="https://github.com/sbofgayschool" role="button">
+                    <i class="fas fa-code"></i>
                 </a>
             </li>
         </ul>
@@ -43,57 +43,54 @@
         <!-- Sidebar -->
         <div id="user" class="sidebar">
             <!-- Sidebar user panel (optional) -->
-            <div class="user-panel mt-3 pb-3 mb-3 d-flex">
+            <div class="user-panel mt-3 d-flex">
                 <div class="image">
                     <img src="../res/img/armin.jpg" class="img-circle elevation-2" alt="User Image">
                 </div>
-                <div class="info">
-                    <a class="d-block">{{username}}</a>
+                <div style="padding-left: 16px; color: #d0d4db">
+                    <dl>
+                        <dd style="font-size: 125%">{{username}}</dd>
+                        <dd style="font-size: 95%">Logged in as <b>{{teacher ? "Teacher" : "Student"}}</b>.</dd>
+                        <dd style="font-size: 50%">{{note.length > 20 ? note.substring(0, 20) + "..." : note}}</dd>
+                    </dl>
                 </div>
             </div>
-            <div style="color: #d0d4db">
-                {{teacher ? "TEACHER" : "STUDENT"}}
-            </div>
-            <div style="color: #d0d4db">
-                {{note}}
-            </div>
-            <hr style="color: #d0d4db">
-            <br>
             <!-- Sidebar Menu -->
             <nav class="mt-2">
                 <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
                     <!-- Add icons to the links using the .nav-icon class
                              with font-awesome or any other icon font library -->
-                    <li class="nav-header">Account</li>
+                    <li class="nav-item"></li>
+                    <li class="nav-header" style="font-size: 150%">Course</li>
+                    <li v-if="teacher" class="nav-item">
+                        <a href="../course/add.html" class="nav-link">
+                            <i class="nav-icon fa fa-plus"></i>
+                            <p>New Course</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="../course/search.html" class="nav-link">
+                            <i class="nav-icon fa fa-search"></i>
+                            <p>Search Course</p>
+                        </a>
+                    </li>
+                    <li class="nav-header" style="font-size: 150%">Account</li>
                     <li class="nav-item">
                         <a href="../user/search.html" class="nav-link">
-                            <i class="nav-icon far fa-user"></i>
+                            <i class="nav-icon fa fa-user"></i>
                             <p>Search User</p>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a href="../user/info.html" class="nav-link">
-                            <i class="nav-icon far fa-image"></i>
-                            <p>Change Info.</p>
+                            <i class="nav-icon fa fa-pen"></i>
+                            <p>Change Information</p>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a href="#" onclick="UserLogout()" class="nav-link">
-                            <i class="nav-icon far fa-image"></i>
+                            <i class="nav-icon fa fa-door-open"></i>
                             <p>Logout</p>
-                        </a>
-                    </li>
-                    <li class="nav-header">Course</li>
-                    <li class="nav-item">
-                        <a href="../course/search.html" class="nav-link">
-                            <i class="nav-icon far fa-user"></i>
-                            <p>Search Course</p>
-                        </a>
-                    </li>
-                    <li v-if="teacher" class="nav-item">
-                        <a href="../course/add.html" class="nav-link">
-                            <i class="nav-icon far fa-image"></i>
-                            <p>New Course</p>
                         </a>
                     </li>
                 </ul>
@@ -109,12 +106,12 @@
             <div class="container-fluid">
                 <div class="row mb-2">
                     <div class="col-sm-6">
-                        <h1 class="m-0 text-dark">Dashboard</h1>
+                        <h1 class="m-0 text-dark">Course Main Page</h1>
                     </div><!-- /.col -->
                     <div class="col-sm-6">
                         <ol class="breadcrumb float-sm-right">
-                            <li class="breadcrumb-item"><a href="#">Home</a></li>
-                            <li class="breadcrumb-item active">Dashboard v1</li>
+                            <li class="breadcrumb-item"><a href="../course/search.html">Course</a></li>
+                            <li class="breadcrumb-item active" id="liCourseName"></li>
                         </ol>
                     </div><!-- /.col -->
                 </div><!-- /.row -->
@@ -127,35 +124,35 @@
                 <div class="col-md-12">
                     <div id="info" class="card card-primary">
                         <div class="card-header">
-                            <h3 class="card-title">Course Info</h3>
+                            <h3 class="card-title">Course Information</h3>
                         </div>
                         <div class="card-body">
                             <h2>{{name}}</h2>
                             <dl>
-                                <dt>{{tag}}</dt>
-                                <dt>{{ownerUsername}}</dt>
+                                <dt style="font-size: 125%">{{tag}}</dt>
                                 <dd>{{note}}</dd>
+                                <dd>The course is currently owned by <b>{{ownerUsername}}</b>.</dd>
                             </dl>
                         </div>
                         <div class="card-footer">
-                            <button v-if="relation==3" class="btn btn-primary" data-toggle="modal" data-target="#dlgSetInfo">Set Info</button>
+                            <button v-if="relation==3" class="btn btn-primary" data-toggle="modal" data-target="#dlgSetInfo">Set Information</button>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="row">
                 <div class="col-md-12">
-                    <div id="operation" class="card card-primary">
+                    <div id="operation" class="card card-dark">
                         <div class="card-header">
                             <h3 class="card-title">Operation</h3>
                             <span id="spanAudience" style="float: right">Current Relation: {{relationMessage}}</span>
                         </div>
                         <div class="card-body">
-                            <a v-bind:href="'../live/student.html?course='+id" class="btn btn-primary">Live Room</a>
-                            <a v-bind:href="'../live/teacher.html?course='+id" class="btn btn-primary" v-if="relation >= 2">Live Host</a>
-                            <a v-bind:href="'../vod/search.html?course='+id" class="btn btn-primary">Video List</a>
-                            <a v-bind:href="'../forum/search.html?course='+id" class="btn btn-primary">Forum</a>
-                            <button v-if="relation!==3" v-on:click="Subscribe()" class="btn btn-primary">{{relation ? "Unsubscribe" : "Learn"}}</button></td>
+                            <a v-bind:href="'../live/student.html?course='+id" class="btn btn-dark">Live Room</a>
+                            <a v-bind:href="'../live/teacher.html?course='+id" class="btn btn-dark" v-if="relation >= 2">Live Host</a>
+                            <a v-bind:href="'../vod/search.html?course='+id" class="btn btn-dark">Video List</a>
+                            <a v-bind:href="'../forum/search.html?course='+id" class="btn btn-dark">Forum</a>
+                            <button v-if="relation!==3" v-on:click="Subscribe()" v-bind:class="relation ? 'btn btn-danger' : 'btn btn-dark'">{{relation ? "Unsubscribe" : "Learn"}}</button></td>
                         </div>
                         <div class="card-footer">
                         </div>
@@ -164,7 +161,7 @@
             </div>
             <div class="row">
                 <div class="col-md-12">
-                    <div id="users" class="card card-primary">
+                    <div id="users" class="card card-info">
                         <div class="card-header">
                             <h3 class="card-title">Users</h3>
                         </div>
@@ -174,7 +171,7 @@
                                 <div class="row">
                                     <div class="col-2"><label>Search Id</label></div>
                                     <div class="col-2"><label>Search Username</label></div>
-                                    <div class="col-3"><label>Search Teacher</label></div>
+                                    <div class="col-3"><label>Search Identity</label></div>
                                     <div class="col-3"><label>Search Relation</label></div>
                                     <div class="col-2"><label>Go Search</label></div>
                                 </div>
@@ -197,7 +194,7 @@
                                             <option value="3">Owning</option>
                                         </select>
                                     </div>
-                                    <div class="col-2"><button class="btn btn-primary" v-on:click="Search(true)">Search</button></div>
+                                    <div class="col-2"><button class="btn btn-info" style="width: 100%" v-on:click="Search(true)">Search</button></div>
                                 </div>
                             </div>
                             <div class="row">
@@ -208,8 +205,8 @@
                                 <tr>
                                     <th style="width: 10%">Id</th>
                                     <th style="width: 20%">Username</th>
+                                    <th style="width: 20%">Identity</th>
                                     <th style="width: 20%">Relation</th>
-                                    <th style="width: 20%">Teacher</th>
                                     <th style="width: 20%">Operation</th>
                                 </tr>
                                 </thead>
@@ -219,7 +216,7 @@
                                     <td>{{x.Username}}</td>
                                     <td>{{x.Teacher ? "Teacher" : "Student"}}</td>
                                     <td>{{x.RelationMessage}}</td>
-                                    <td><button v-if="(owner && x.Id != uid) || (!owner && x.Id == uid)" class="btn btn-primary" v-on:click="Subscribe(x.Id)">{{x.Relation ? "Remove" : "Invite"}}</button></td>
+                                    <td><button v-if="(owner && x.Id != uid) || (!owner && x.Id == uid)" v-bind:class="x.Relation ? 'btn btn-danger' : 'btn btn-info'" v-on:click="Subscribe(x.Id)">{{x.Relation ? "Remove" : "Invite"}}</button></td>
                                 </tr>
                                 <tr v-if="!display.length"><td colspan="5" style="text-align: center">No results found.</td></tr>
                                 </tbody>
@@ -244,7 +241,7 @@
             </div>
             <div id="comments" v-if="filtered.length > 0" class="row">
                 <div class="col-md-12">
-                    <div class="card card-primary">
+                    <div class="card card-navy">
                         <div class="card-header">
                             <h3 class="card-title">Comments</h3>
                         </div>
@@ -271,9 +268,9 @@
             </div>
             <div class="row" id="rowNewComment" v-if="relation > 0 && available">
                 <div class="col-md-12">
-                    <div class="card card-primary">
+                    <div class="card card-secondary">
                         <div class="card-header">
-                            <h3 class="card-title">New Comment</h3>
+                            <h3 class="card-title">Post Comment</h3>
                         </div>
                         <form id="formComment" class="form-horizontal">
                             <div class="card-body">
@@ -298,8 +295,8 @@
                             </div>
                         </form>
                         <div class="card-footer">
-                            <button class="btn btn-primary" onclick="AddComment()">Add Comment</button>
-                            <button class="btn btn-primary float-right" onclick="$('#textComment').val('');$('#selectRate').val('5');">Clear</button>
+                            <button class="btn btn-secondary" onclick="AddComment()">Post Comment</button>
+                            <button class="btn btn-danger float-right" onclick="$('#textComment').val('');$('#selectRate').val('5');">Clear</button>
                         </div>
                     </div>
                 </div>
@@ -309,10 +306,10 @@
     </div>
     <!-- /.content-wrapper -->
     <footer class="main-footer">
-        <strong>Copyright &copy; 2014-2019 <a href="http://adminlte.io">AdminLTE.io</a>.</strong>
+        <strong>Copyright &copy; 2020 SBofGaySchool(tc2819).</strong>
         All rights reserved.
         <div class="float-right d-none d-sm-inline-block">
-            <b>Version</b> 3.0.5
+            <b>Version</b> 1.0.0
         </div>
     </footer>
 
@@ -327,7 +324,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h4 class="modal-title">Info Set</h4>
+                <h4 class="modal-title">Set Information</h4>
                 <button type="button" class="close" onclick="SetInfo(false)" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
@@ -350,7 +347,7 @@
             </div>
             <div class="modal-footer justify-content-between">
                 <button type="button" class="btn btn-primary" onclick="SetInfo(true)">Commit</button>
-                <button type="button" class="btn btn-default" onclick="SetInfo(false)">Close</button>
+                <button type="button" class="btn btn-danger" onclick="SetInfo(false)">Close</button>
             </div>
         </div>
         <!-- /.modal-content -->
@@ -509,6 +506,7 @@
     function LoadInfo() {
         Ajax(Api("course/course/get/" + operation.$data.id), null, null, "GET", function (data) {
             info.$data.name = data.Name;
+            $("#liCourseName").text(info.$data.name);
             info.$data.ownerUsername = data.OwnerUsername;
             info.$data.tag = data.Tag;
             info.$data.note = data.Note;
@@ -550,7 +548,7 @@
                 if (data[i]["User"] === user.$data.id) {
                     newComment.$data.available = false;
                 }
-                data[i]["Title"] = data[i]["Username"] + " - " + data[i]["Rate"] + " - " + new Date(data[i]["Time"]).toUTCString();
+                data[i]["Title"] = "[ RATING: " + data[i]["Rate"] + " / 5 ] - " + data[i]["Username"] + " - " + new Date(data[i]["Time"]).toUTCString();
             }
             comments.$data.filtered = data;
             comments.SearchChangePage();

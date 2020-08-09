@@ -25,8 +25,8 @@
         <!-- Right navbar links -->
         <ul class="navbar-nav ml-auto">
             <li class="nav-item">
-                <a class="nav-link" href="#" role="button">
-                    <i class="fas fa-th-large"></i>
+                <a class="nav-link" href="https://github.com/sbofgayschool" role="button">
+                    <i class="fas fa-code"></i>
                 </a>
             </li>
         </ul>
@@ -43,43 +43,53 @@
         <!-- Sidebar -->
         <div id="user" class="sidebar">
             <!-- Sidebar user panel (optional) -->
-            <div class="user-panel mt-3 pb-3 mb-3 d-flex">
+            <div class="user-panel mt-3 d-flex">
                 <div class="image">
                     <img src="../res/img/armin.jpg" class="img-circle elevation-2" alt="User Image">
                 </div>
-                <div class="info">
-                    <a class="d-block">{{username}}</a>
+                <div style="padding-left: 16px; color: #d0d4db">
+                    <dl>
+                        <dd style="font-size: 125%">{{username}}</dd>
+                        <dd style="font-size: 95%">Logged in as <b>{{teacher ? "Teacher" : "Student"}}</b>.</dd>
+                        <dd style="font-size: 50%">{{note.length > 20 ? note.substring(0, 20) + "..." : note}}</dd>
+                    </dl>
                 </div>
             </div>
-            <div style="color: #d0d4db">
-                {{teacher ? "TEACHER" : "STUDENT"}}
-            </div>
-            <div style="color: #d0d4db">
-                {{note}}
-            </div>
-            <hr style="color: #d0d4db">
-            <br>
             <!-- Sidebar Menu -->
             <nav class="mt-2">
                 <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
                     <!-- Add icons to the links using the .nav-icon class
                              with font-awesome or any other icon font library -->
-                    <li class="nav-header">Account</li>
+                    <li class="nav-item"></li>
+                    <li class="nav-header" style="font-size: 150%">Course</li>
+                    <li v-if="teacher" class="nav-item">
+                        <a href="../course/add.html" class="nav-link">
+                            <i class="nav-icon fa fa-plus"></i>
+                            <p>New Course</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="../course/search.html" class="nav-link">
+                            <i class="nav-icon fa fa-search"></i>
+                            <p>Search Course</p>
+                        </a>
+                    </li>
+                    <li class="nav-header" style="font-size: 150%">Account</li>
                     <li class="nav-item">
                         <a href="../user/search.html" class="nav-link">
-                            <i class="nav-icon far fa-user"></i>
+                            <i class="nav-icon fa fa-user"></i>
                             <p>Search User</p>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="../user/info.html" class="nav-link">
-                            <i class="nav-icon far fa-image"></i>
-                            <p>Change Info.</p>
+                        <a href="../user/info.html" class="nav-link active">
+                            <i class="nav-icon fa fa-pen"></i>
+                            <p>Change Information</p>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a href="#" onclick="UserLogout()" class="nav-link">
-                            <i class="nav-icon far fa-image"></i>
+                            <i class="nav-icon fa fa-door-open"></i>
                             <p>Logout</p>
                         </a>
                     </li>
@@ -96,12 +106,12 @@
             <div class="container-fluid">
                 <div class="row mb-2">
                     <div class="col-sm-6">
-                        <h1 class="m-0 text-dark">Dashboard</h1>
+                        <h1 class="m-0 text-dark">Change Information</h1>
                     </div><!-- /.col -->
                     <div class="col-sm-6">
                         <ol class="breadcrumb float-sm-right">
-                            <li class="breadcrumb-item"><a href="#">Home</a></li>
-                            <li class="breadcrumb-item active">Dashboard v1</li>
+                            <li class="breadcrumb-item"><a href="../user/search.html">User</a></li>
+                            <li class="breadcrumb-item active">Change Information</li>
                         </ol>
                     </div><!-- /.col -->
                 </div><!-- /.row -->
@@ -121,7 +131,7 @@
                                 <div class="form-group row">
                                     <label class="col-sm-2 col-form-label">Original Password</label>
                                     <div class="col-sm-10">
-                                        <input name="originalPassword" type="password" class="form-control" placeholder="Original Password">
+                                        <input id="inputOriginalPassword" name="originalPassword" type="password" class="form-control" placeholder="Original Password">
                                     </div>
                                 </div>
                                 <div class="form-group row">
@@ -139,8 +149,8 @@
                             </div>
                         </form>
                         <div class="card-footer">
-                            <button class="btn btn-primary" onclick="ChangePassword()">Change Password</button>
-                            <a href="../course/search.html" class="btn btn-danger float-right">Cancel</a>
+                            <button class="btn btn-primary" onclick="ChangePassword()">Commit</button>
+                            <button class="btn btn-danger float-right" onclick="$('#inputOriginalPassword').val('');$('#inputPassword').val('');$('#inputRetypePassword').val('');">Cancel</button>
                         </div>
                     </div>
                 </div>
@@ -149,7 +159,7 @@
         <section class="content">
             <div class="row">
                 <div class="col-md-12">
-                    <div class="card card-primary">
+                    <div class="card card-info">
                         <div class="card-header">
                             <h3 class="card-title">Change Note</h3>
                         </div>
@@ -164,8 +174,8 @@
                             </div>
                         </form>
                         <div class="card-footer">
-                            <button class="btn btn-primary" onclick="ChangeNote()">Change Note</button>
-                            <a href="../course/search.html" class="btn btn-danger float-right">Cancel</a>
+                            <button class="btn btn-info" onclick="ChangeNote()">Commit</button>
+                            <button class="btn btn-danger float-right" onclick="$('#textareaNote').val(user.$data.note);">Cancel</button>
                         </div>
                     </div>
                 </div>
@@ -175,10 +185,10 @@
     </div>
     <!-- /.content-wrapper -->
     <footer class="main-footer">
-        <strong>Copyright &copy; 2014-2019 <a href="http://adminlte.io">AdminLTE.io</a>.</strong>
+        <strong>Copyright &copy; 2020 SBofGaySchool(tc2819).</strong>
         All rights reserved.
         <div class="float-right d-none d-sm-inline-block">
-            <b>Version</b> 3.0.5
+            <b>Version</b> 1.0.0
         </div>
     </footer>
 

@@ -42,7 +42,7 @@ function SpStart(pdf, opts, timestamp) {
         }
         spPdfObject = pdfObj;
         if (spBroadcast) {
-            $("#spanSpNote").hide();
+            // $("#spanSpNote").hide();
             $("#btnSpPagePrev").show();
             $("#btnSpClean").show();
             $("#btnSpPageNext").show();
@@ -80,7 +80,7 @@ function SpStop() {
     spCurPage = -1;
     spPdfObject = null;
     if (spBroadcast) {
-        $("#spanSpNote").show();
+        // $("#spanSpNote").show();
         $("#btnSpPagePrev").hide();
         $("#btnSpClean").hide();
         $("#btnSpPageNext").hide();

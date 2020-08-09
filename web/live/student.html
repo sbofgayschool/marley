@@ -25,8 +25,8 @@
         <!-- Right navbar links -->
         <ul class="navbar-nav ml-auto">
             <li class="nav-item">
-                <a class="nav-link" href="#" role="button">
-                    <i class="fas fa-th-large"></i>
+                <a class="nav-link" href="https://github.com/sbofgayschool" role="button">
+                    <i class="fas fa-code"></i>
                 </a>
             </li>
         </ul>
@@ -35,20 +35,24 @@
     <!-- Main Sidebar Container -->
     <aside class="main-sidebar sidebar-dark-primary elevation-4">
         <!-- Brand Logo -->
-        <a href="index3.html" class="brand-link">
+        <a href="../index/index.html" class="brand-link">
             <img src="../res/img/marley.jpg" alt="AdminLTE Logo" class="brand-image img-circle elevation-3"
                  style="opacity: .8">
             <span class="brand-text font-weight-light">Project Marley</span>
         </a>
         <!-- Sidebar -->
-        <div class="sidebar">
+        <div id="user" class="sidebar">
             <!-- Sidebar user panel (optional) -->
-            <div class="user-panel mt-3 pb-3 mb-3 d-flex">
+            <div class="user-panel mt-3 d-flex">
                 <div class="image">
                     <img src="../res/img/armin.jpg" class="img-circle elevation-2" alt="User Image">
                 </div>
-                <div class="info">
-                    <a href="#" class="d-block">Armin Alpha</a>
+                <div style="padding-left: 16px; color: #d0d4db">
+                    <dl>
+                        <dd style="font-size: 125%">{{username}}</dd>
+                        <dd style="font-size: 95%">Logged in as <b>{{teacher ? "Teacher" : "Student"}}</b>.</dd>
+                        <dd style="font-size: 50%">{{note.length > 20 ? note.substring(0, 20) + "..." : note}}</dd>
+                    </dl>
                 </div>
             </div>
             <!-- Sidebar Menu -->
@@ -56,13 +60,37 @@
                 <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
                     <!-- Add icons to the links using the .nav-icon class
                              with font-awesome or any other icon font library -->
-                    <li class="nav-header">EXAMPLES</li>
+                    <li class="nav-item"></li>
+                    <li class="nav-header" style="font-size: 150%">Course</li>
+                    <li v-if="teacher" class="nav-item">
+                        <a href="../course/add.html" class="nav-link">
+                            <i class="nav-icon fa fa-plus"></i>
+                            <p>New Course</p>
+                        </a>
+                    </li>
                     <li class="nav-item">
-                        <a href="pages/gallery.html" class="nav-link">
-                            <i class="nav-icon far fa-image"></i>
-                            <p>
-                                Gallery
-                            </p>
+                        <a href="../course/search.html" class="nav-link">
+                            <i class="nav-icon fa fa-search"></i>
+                            <p>Search Course</p>
+                        </a>
+                    </li>
+                    <li class="nav-header" style="font-size: 150%">Account</li>
+                    <li class="nav-item">
+                        <a href="../user/search.html" class="nav-link">
+                            <i class="nav-icon fa fa-user"></i>
+                            <p>Search User</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="../user/info.html" class="nav-link">
+                            <i class="nav-icon fa fa-pen"></i>
+                            <p>Change Information</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" onclick="UserLogout()" class="nav-link">
+                            <i class="nav-icon fa fa-door-open"></i>
+                            <p>Logout</p>
                         </a>
                     </li>
                 </ul>
@@ -78,12 +106,13 @@
             <div class="container-fluid">
                 <div class="row mb-2">
                     <div class="col-sm-6">
-                        <h1 class="m-0 text-dark">Dashboard</h1>
+                        <h1 class="m-0 text-dark">Live Room</h1>
                     </div><!-- /.col -->
                     <div class="col-sm-6">
                         <ol class="breadcrumb float-sm-right">
-                            <li class="breadcrumb-item"><a href="#">Home</a></li>
-                            <li class="breadcrumb-item active">Dashboard v1</li>
+                            <li class="breadcrumb-item"><a href="../course/search.html">Course</a></li>
+                            <li class="breadcrumb-item"><a id="aCourse"></a></li>
+                            <li class="breadcrumb-item active">Live Room</li>
                         </ol>
                     </div><!-- /.col -->
                 </div><!-- /.row -->
@@ -96,7 +125,7 @@
                 <div class="col-md-8">
                     <div class="card card-default">
                         <div class="card-header">
-                            <h3 class="card-title">Video</h3>
+                            <h3 class="card-title">Live Media</h3>
                             <span id="spanAudience" style="float: right">Audience: 0</span>
                         </div>
                         <div id="divCanvasBody" class="card-body" style="padding: 0;">
@@ -122,9 +151,9 @@
                 </div>
                 <div class="col-md-4">
                     <!-- DIRECT CHAT PRIMARY -->
-                    <div id="divChat" class="card cardutline direct-chat">
-                        <div class="card-header">
-                            <h3 class="card-title">Direct Chat</h3>
+                    <div id="divChat" class="card cardutline direct-chat" >
+                        <div class="card-header" style="background-color: lightgrey">
+                            <h3 class="card-title">Chat</h3>
                             <span style="float: right">
                                 <input id="checkAutoScroll" v-model="autoScroll" type="checkbox" checked/>
                                 <label for="checkAutoScroll">Auto Scroll</label>
@@ -165,8 +194,8 @@
                             <div class="input-group">
                                 <input v-model="newMessage.Message" type="text" placeholder="Type Message ..." class="form-control">
                                 <span class="input-group-append">
-                                    <button v-on:click="Record" :disabled="recorderStatus > 1" class="btn btn-danger">{{recorderStatus == 0 ? "Record" : "Stop"}}</button>
-                                    <button class="btn btn-success" data-toggle="modal" data-target="#dlgFileUpload">Upload</button>
+                                    <button v-on:click="Record" :disabled="recorderStatus > 1" class="btn btn-info">{{recorderStatus == 0 ? "Record" : "Stop"}}</button>
+                                    <button class="btn btn-dark" data-toggle="modal" data-target="#dlgFileUpload">Upload</button>
                                     <button v-on:click="SendMessage" class="btn btn-primary">Send</button>
                                 </span>
                             </div>
@@ -181,10 +210,10 @@
     </div>
     <!-- /.content-wrapper -->
     <footer class="main-footer">
-        <strong>Copyright &copy; 2014-2019 <a href="http://adminlte.io">AdminLTE.io</a>.</strong>
+        <strong>Copyright &copy; 2020 SBofGaySchool(tc2819).</strong>
         All rights reserved.
         <div class="float-right d-none d-sm-inline-block">
-            <b>Version</b> 3.0.5
+            <b>Version</b> 1.0.0
         </div>
     </footer>
 
@@ -199,7 +228,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h4 class="modal-title">Chat File Upload</h4>
+                <h4 class="modal-title">Upload Chat File</h4>
                 <button type="button" class="close" onclick="ChatUploadFile(false)" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
@@ -222,7 +251,7 @@
             </div>
             <div class="modal-footer justify-content-between">
                 <button type="button" class="btn btn-primary" onclick="ChatUploadFile(true)">Upload</button>
-                <button type="button" class="btn btn-default" onclick="ChatUploadFile(false)">Close</button>
+                <button type="button" class="btn btn-danger" onclick="ChatUploadFile(false)">Close</button>
             </div>
         </div>
         <!-- /.modal-content -->
@@ -246,6 +275,7 @@
 <script src="../res/plugins/recorder.js/recorder.js"></script>
 
 <script src="../res/js/common.js"></script>
+<script src="../res/js/user/user.js"></script>
 <script src="../res/js/infra/sock.js"></script>
 <script src="../res/js/infra/rtc.js"></script>
 <script src="../res/js/service/chat.js"></script>
@@ -406,6 +436,10 @@
     let liveCheckInterval = 5000;
 
     $(function() {
+        Ajax(Api("course/course/get/" + liveOption.$data.course), null, null, "GET", function (data) {
+            $("#aCourse").text(data.Name);
+            $("#aCourse").attr("href", "../course/course.html?id=" + liveOption.$data.course)
+        });
         sockMessageHandler[liveType] = LiveOnMessageHandler;
         SockOpen(liveOption.$data.course);
         setInterval(SockSendMessage, liveCheckInterval, {"Type": liveType, "Operation": "check"});

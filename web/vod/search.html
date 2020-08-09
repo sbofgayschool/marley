@@ -25,8 +25,8 @@
         <!-- Right navbar links -->
         <ul class="navbar-nav ml-auto">
             <li class="nav-item">
-                <a class="nav-link" href="#" role="button">
-                    <i class="fas fa-th-large"></i>
+                <a class="nav-link" href="https://github.com/sbofgayschool" role="button">
+                    <i class="fas fa-code"></i>
                 </a>
             </li>
         </ul>
@@ -43,57 +43,54 @@
         <!-- Sidebar -->
         <div id="user" class="sidebar">
             <!-- Sidebar user panel (optional) -->
-            <div class="user-panel mt-3 pb-3 mb-3 d-flex">
+            <div class="user-panel mt-3 d-flex">
                 <div class="image">
                     <img src="../res/img/armin.jpg" class="img-circle elevation-2" alt="User Image">
                 </div>
-                <div class="info">
-                    <a class="d-block">{{username}}</a>
+                <div style="padding-left: 16px; color: #d0d4db">
+                    <dl>
+                        <dd style="font-size: 125%">{{username}}</dd>
+                        <dd style="font-size: 95%">Logged in as <b>{{teacher ? "Teacher" : "Student"}}</b>.</dd>
+                        <dd style="font-size: 50%">{{note.length > 20 ? note.substring(0, 20) + "..." : note}}</dd>
+                    </dl>
                 </div>
             </div>
-            <div style="color: #d0d4db">
-                {{teacher ? "TEACHER" : "STUDENT"}}
-            </div>
-            <div style="color: #d0d4db">
-                {{note}}
-            </div>
-            <hr style="color: #d0d4db">
-            <br>
             <!-- Sidebar Menu -->
             <nav class="mt-2">
                 <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
                     <!-- Add icons to the links using the .nav-icon class
                              with font-awesome or any other icon font library -->
-                    <li class="nav-header">Account</li>
+                    <li class="nav-item"></li>
+                    <li class="nav-header" style="font-size: 150%">Course</li>
+                    <li v-if="teacher" class="nav-item">
+                        <a href="../course/add.html" class="nav-link">
+                            <i class="nav-icon fa fa-plus"></i>
+                            <p>New Course</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="../course/search.html" class="nav-link">
+                            <i class="nav-icon fa fa-search"></i>
+                            <p>Search Course</p>
+                        </a>
+                    </li>
+                    <li class="nav-header" style="font-size: 150%">Account</li>
                     <li class="nav-item">
                         <a href="../user/search.html" class="nav-link">
-                            <i class="nav-icon far fa-user"></i>
+                            <i class="nav-icon fa fa-user"></i>
                             <p>Search User</p>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a href="../user/info.html" class="nav-link">
-                            <i class="nav-icon far fa-image"></i>
-                            <p>Change Info.</p>
+                            <i class="nav-icon fa fa-pen"></i>
+                            <p>Change Information</p>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a href="#" onclick="UserLogout()" class="nav-link">
-                            <i class="nav-icon far fa-image"></i>
+                            <i class="nav-icon fa fa-door-open"></i>
                             <p>Logout</p>
-                        </a>
-                    </li>
-                    <li class="nav-header">Course</li>
-                    <li class="nav-item">
-                        <a href="../course/search.html" class="nav-link">
-                            <i class="nav-icon far fa-user"></i>
-                            <p>Search Course</p>
-                        </a>
-                    </li>
-                    <li v-if="teacher" class="nav-item">
-                        <a href="../course/add.html" class="nav-link">
-                            <i class="nav-icon far fa-image"></i>
-                            <p>New Course</p>
                         </a>
                     </li>
                 </ul>
@@ -109,12 +106,13 @@
             <div class="container-fluid">
                 <div class="row mb-2">
                     <div class="col-sm-6">
-                        <h1 class="m-0 text-dark">Dashboard</h1>
+                        <h1 class="m-0 text-dark">Course Video</h1>
                     </div><!-- /.col -->
                     <div class="col-sm-6">
                         <ol class="breadcrumb float-sm-right">
-                            <li class="breadcrumb-item"><a href="#">Home</a></li>
-                            <li class="breadcrumb-item active">Dashboard v1</li>
+                            <li class="breadcrumb-item"><a href="../course/search.html">Course</a></li>
+                            <li class="breadcrumb-item"><a id="aCourse"></a></li>
+                            <li class="breadcrumb-item active">Video</li>
                         </ol>
                     </div><!-- /.col -->
                 </div><!-- /.row -->
@@ -127,7 +125,7 @@
                 <div class="col-md-12">
                     <div class="card card-primary">
                         <div class="card-header">
-                            <h3 class="card-title">Posts</h3>
+                            <h3 class="card-title">Videos</h3>
                         </div>
                         <!-- /.card-header -->
                         <div class="card-body">
@@ -140,7 +138,7 @@
                                 <div class="row">
                                     <div class="col-4"><input class="form-control" placeholder="Video Id" v-model="search.id"></div>
                                     <div class="col-4"><input class="form-control" placeholder="Video Name" v-model="search.name"></div>
-                                    <div class="col-4"><button class="btn btn-primary" v-on:click="Search(true)">Search</button></div>
+                                    <div class="col-4"><button class="btn btn-primary" style="width: 100%" v-on:click="Search(true)">Search</button></div>
                                 </div>
                             </div>
                             <div class="row">
@@ -149,8 +147,8 @@
                             <table class="table table-bordered" style="/*word-wrap:break-word; word-break:break-all;*/">
                                 <thead>
                                 <tr>
-                                    <th style="width: 20%">Id</th>
-                                    <th style="width: 30%">Name</th>
+                                    <th style="width: 10%">Id</th>
+                                    <th style="width: 40%">Name</th>
                                     <th style="width: 30%">Time</th>
                                     <th style="width: 20%">Operation</th>
                                 </tr>
@@ -162,7 +160,7 @@
                                     <td>{{x.Time}}</td>
                                     <td>
                                         <button v-if="relation>=2||x.User===uid" class="btn btn-primary" data-toggle="modal" data-target="#dlgSetName" v-on:click="SetDlgName(x.Id, x.Name)">Rename</button>
-                                        <button v-if="relation>=2||x.User===uid" v-on:click="Delete(x.Id)" class="btn btn-primary">Delete</button>
+                                        <button v-if="relation>=2||x.User===uid" v-on:click="Delete(x.Id)" class="btn btn-danger">Delete</button>
                                     </td>
                                 </tr>
                                 <tr v-if="!display.length"><td colspan="4" style="text-align: center">No results found.</td></tr>
@@ -188,7 +186,7 @@
             </div>
             <div class="row" v-if="relation!==0">
                 <div class="col-md-12">
-                    <div class="card card-primary">
+                    <div class="card card-dark">
                         <div class="card-header">
                             <h3 class="card-title">New Video</h3>
                         </div>
@@ -205,10 +203,10 @@
                                     <label class="col-sm-2 col-form-label">Quality</label>
                                     <div class="col-sm-10">
                                         <select id="selectQuality" name="quality" class="form-control">
-                                            <option value="3" selected>144p & 360p & 576p</option>
-                                            <option value="2">144p & 360p</option>
-                                            <option value="1">144p</option>
                                             <option value="0">Audio only</option>
+                                            <option value="1">144p</option>
+                                            <option value="2">144p & 360p</option>
+                                            <option value="3" selected>144p & 360p & 576p</option>
                                         </select>
                                     </div>
                                 </div>
@@ -221,8 +219,8 @@
                             </div>
                         </form>
                         <div class="card-footer">
-                            <button class="btn btn-primary" onclick="AddVideo()">Add</button>
-                            <button class="btn btn-primary float-right" onclick="$('#inputName').val('');$('#selectQuality').val('3');$('#inputFile').val('');">Clear</button>
+                            <button class="btn btn-dark" onclick="AddVideo()">Add</button>
+                            <button class="btn btn-danger float-right" onclick="$('#inputName').val('');$('#selectQuality').val('3');$('#inputFile').val('');">Clear</button>
                         </div>
                     </div>
                 </div>
@@ -232,10 +230,10 @@
     </div>
     <!-- /.content-wrapper -->
     <footer class="main-footer">
-        <strong>Copyright &copy; 2014-2019 <a href="http://adminlte.io">AdminLTE.io</a>.</strong>
+        <strong>Copyright &copy; 2020 SBofGaySchool(tc2819).</strong>
         All rights reserved.
         <div class="float-right d-none d-sm-inline-block">
-            <b>Version</b> 3.0.5
+            <b>Version</b> 1.0.0
         </div>
     </footer>
 
@@ -269,7 +267,7 @@
             </div>
             <div class="modal-footer justify-content-between">
                 <button type="button" class="btn btn-primary" onclick="SetName(true)">Commit</button>
-                <button type="button" class="btn btn-default" onclick="SetName(false)">Close</button>
+                <button type="button" class="btn btn-danger" onclick="SetName(false)">Close</button>
             </div>
         </div>
         <!-- /.modal-content -->
@@ -298,6 +296,8 @@
             }
             videos.$data.relation = data.Relation;
             videos.$data.courseName = data.Name;
+            $("#aCourse").text(videos.$data.courseName);
+            $("#aCourse").attr("href", "../course/course.html?id=" + videos.$data.course)
         })
         LoadData();
     }

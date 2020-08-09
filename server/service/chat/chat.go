@@ -3,8 +3,12 @@ package chat
 import (
 	"github.com/sbofgayschool/marley/server/infra/sock"
 	"github.com/sbofgayschool/marley/server/service/common"
+	"github.com/sbofgayschool/marley/server/service/live"
 	"github.com/sbofgayschool/marley/server/service/user"
+	"github.com/sbofgayschool/marley/server/service/vod"
 	"github.com/sbofgayschool/marley/server/utils"
+	"log"
+	"strconv"
 )
 
 const (
@@ -16,27 +20,17 @@ func init() {
 	sock.RegisterHandler(Tag, sockHandler)
 }
 
-type Chat struct {
-	Username    string
-	MsgType     string
-	Message     string
-	Source      string
-	ElapsedTime int64
-	uid         int
-}
-
-var liveMessageCallback func(string, *Chat)
-
-func SetLiveMessageCallback(f func(string, *Chat)) {
-	liveMessageCallback = f
-}
-
-func chatMessage(id string, chat *Chat) {
-	cid, vod := common.GetIdVodId(id)
-	if vod == "" {
-		liveMessageCallback(cid, chat)
+func chatMessage(id string, chat *common.Chat) {
+	cid, v := common.GetIdVodId(id)
+	if v == "" {
+		live.HandleMessage(cid, chat)
 	} else {
-		// TODO: Put the message directly into the database.
+		if vid, err := strconv.Atoi(v); err != nil {
+			log.Println(err)
+		} else if err := vod.AddChat(int64(vid), chat); err != nil {
+			log.Println("failed to insert chat of Vod")
+			log.Println(err)
+		}
 	}
 }
 
@@ -56,7 +50,7 @@ func sockHandler(msg *sock.Message, _ chan *sock.Message) (res []*sock.Message) 
 		if e, ok := content["ElapsedTime"]; ok {
 			elapsedTime = int64(e.(float64))
 		}
-		chat := &Chat{u.Username, content["MsgType"].(string), content["Message"].(string), content["Source"].(string), elapsedTime, u.Uid}
+		chat := &common.Chat{u.Username, content["MsgType"].(string), content["Message"].(string), content["Source"].(string), elapsedTime, u.Uid}
 		chatMessage(msg.Client.Gid, chat)
 		res = append(res, &sock.Message{Client: nil, Content: map[string]interface{}{
 			sock.TagField:  Tag,

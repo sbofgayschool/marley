@@ -189,45 +189,45 @@ func SetRelation(course int, user int, relation int) error {
 }
 
 func AddComment(course int, user int, rate int, comment string) error {
-    stmt, err := db.DB.Prepare("INSERT INTO comment(course, user, rate, comment, time) VALUES (?, ?, ?, ?, ?)")
-    if err != nil {
-        return errors.New("database error")
-    }
-    defer stmt.Close()
-    if _, err := stmt.Exec(course, user, rate, comment, utils.UnixMillion()); err != nil {
-        return errors.New("database error")
-    }
-    return nil
+	stmt, err := db.DB.Prepare("INSERT INTO comment(course, user, rate, comment, time) VALUES (?, ?, ?, ?, ?)")
+	if err != nil {
+		return errors.New("database error")
+	}
+	defer stmt.Close()
+	if _, err := stmt.Exec(course, user, rate, comment, utils.UnixMillion()); err != nil {
+		return errors.New("database error")
+	}
+	return nil
 }
 
-func SearchComment(course int) ([]*Comment, error){
-    stmt, err := db.DB.Prepare("SELECT comment.course, comment.user, user.username, comment.rate, comment.comment, comment.time FROM comment JOIN user ON comment.user=user.id WHERE comment.course=?")
-    if err != nil {
-        return nil, errors.New("database error")
-    }
-    defer stmt.Close()
-    rows, err := stmt.Query(course)
-    if err != nil {
-        return nil, errors.New("database error")
-    }
-    defer rows.Close()
-    var res []*Comment
-    for rows.Next() {
-        c := Comment{}
-        rows.Scan(&c.Course, &c.User, &c.Username, &c.Rate, &c.Comment, &c.Time)
-        res = append(res, &c)
-    }
-    return res, nil
+func SearchComment(course int) ([]*Comment, error) {
+	stmt, err := db.DB.Prepare("SELECT comment.course, comment.user, user.username, comment.rate, comment.comment, comment.time FROM comment JOIN user ON comment.user=user.id WHERE comment.course=?")
+	if err != nil {
+		return nil, errors.New("database error")
+	}
+	defer stmt.Close()
+	rows, err := stmt.Query(course)
+	if err != nil {
+		return nil, errors.New("database error")
+	}
+	defer rows.Close()
+	var res []*Comment
+	for rows.Next() {
+		c := Comment{}
+		rows.Scan(&c.Course, &c.User, &c.Username, &c.Rate, &c.Comment, &c.Time)
+		res = append(res, &c)
+	}
+	return res, nil
 }
 
 func DeleteComment(course int, user int) error {
-    stmt, err := db.DB.Prepare("DELETE FROM comment WHERE course=? AND user=?")
-    if err != nil {
-        return errors.New("database error")
-    }
-    defer stmt.Close()
-    if _, err := stmt.Exec(course, user); err != nil {
-        return errors.New("database error")
-    }
-    return nil
+	stmt, err := db.DB.Prepare("DELETE FROM comment WHERE course=? AND user=?")
+	if err != nil {
+		return errors.New("database error")
+	}
+	defer stmt.Close()
+	if _, err := stmt.Exec(course, user); err != nil {
+		return errors.New("database error")
+	}
+	return nil
 }

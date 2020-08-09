@@ -206,17 +206,23 @@
             </div>
             <div class="modal-body">
                 <form id="formFile">
-                    <p>
-                        <input id="inputFileName" placeholder="File Name" style="width: 100%;">
-                    </p>
-                    <p>
-                        <input id="inputFile" type="file" name="file">
-                    </p>
+                    <div class="form-group row">
+                        <label class="col-sm-2 col-form-label">Name</label>
+                        <div class="col-sm-10">
+                            <input id="inputFileName" placeholder="Name" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <label class="col-sm-2 col-form-label">File</label>
+                        <div class="col-sm-10">
+                            <input id="inputFile" type="file" name="file">
+                        </div>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer justify-content-between">
-                <button type="button" class="btn btn-default" onclick="ChatUploadFile(false)">Close</button>
                 <button type="button" class="btn btn-primary" onclick="ChatUploadFile(true)">Upload</button>
+                <button type="button" class="btn btn-default" onclick="ChatUploadFile(false)">Close</button>
             </div>
         </div>
         <!-- /.modal-content -->
@@ -232,6 +238,7 @@
 <script src="../res/plugins/adminlte/js/adminlte.js"></script>
 <!-- Vue -->
 <script src="../res/plugins/vue/vue.js"></script>
+<script src="../res/plugins/vue/vue-router.min.js"></script>
 <script src="../res/plugins/pdf/pdf.js"></script>
 <script type="application/javascript">
     pdfjsLib.GlobalWorkerOptions.workerSrc = '../res/plugins/pdf/pdf.worker.js';
@@ -252,9 +259,15 @@
 
 <!-- Page specified script -->
 <script type="application/javascript">
+    let router = new VueRouter({
+        mode: "history",
+        routes: []
+    });
     let liveOption = new Vue({
+        router,
         el: "#divLiveOption",
         data: {
+            course: 0,
             on: 0,
             quality: "3",
             qualities: allQualities,
@@ -311,6 +324,9 @@
                     RTCStopConnection();
                 }
             }
+        },
+        mounted: function() {
+            this.$data.course = this.$route.query.course;
         }
     });
 
@@ -391,8 +407,7 @@
 
     $(function() {
         sockMessageHandler[liveType] = LiveOnMessageHandler;
-        // TODO: User real course id here
-        SockOpen("1");
+        SockOpen(liveOption.$data.course);
         setInterval(SockSendMessage, liveCheckInterval, {"Type": liveType, "Operation": "check"});
     });
 </script>

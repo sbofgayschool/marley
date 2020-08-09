@@ -2,13 +2,9 @@ package live
 
 import (
 	"errors"
+	"github.com/sbofgayschool/marley/server/service/common"
 	"github.com/sbofgayschool/marley/server/utils"
 )
-
-type Operation struct {
-	Opt         string
-	ElapsedTime int64
-}
 
 func addOperation(id string, timestamp int64, opt string) error {
 	lock.RLock()
@@ -17,7 +13,7 @@ func addOperation(id string, timestamp int64, opt string) error {
 	if !ok || b.Timestamp != timestamp {
 		return errors.New("broadcasting has stopped")
 	}
-	b.operations = append(b.operations, &Operation{Opt: opt, ElapsedTime: utils.UnixMillion()})
+	b.operations = append(b.operations, &common.Operation{Opt: opt, ElapsedTime: utils.UnixMillion()})
 	return nil
 }
 

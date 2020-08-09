@@ -336,7 +336,7 @@
         });
     }
     function AddForum() {
-        Ajax(Api("forum/forum/add/"), null, new FormData($("#form")[0]), "PUT", function(data) {
+        Ajax(Api("forum/forum/add"), null, new FormData($("#form")[0]), "PUT", function(data) {
             alert("Post added!");
             $("#inputTitle").val("");
             $("#textContent").val("");

@@ -1,10 +1,13 @@
 package live
 
 import (
-	"encoding/json"
 	"errors"
+	"github.com/sbofgayschool/marley/server/service/common"
+	"github.com/sbofgayschool/marley/server/service/vod"
 	"github.com/sbofgayschool/marley/server/utils"
+	"strconv"
 	"sync"
+	"time"
 
 	"log"
 
@@ -12,7 +15,6 @@ import (
 
 	"github.com/sbofgayschool/marley/server/infra/rtc"
 	"github.com/sbofgayschool/marley/server/infra/sock"
-	"github.com/sbofgayschool/marley/server/service/chat"
 	"github.com/sbofgayschool/marley/server/service/user"
 )
 
@@ -26,8 +28,8 @@ type Broadcaster struct {
 	audioTimestamp *int64
 	Qualities      int
 	Pdf            string
-	operations     []*Operation
-	chats          []*chat.Chat
+	operations     []*common.Operation
+	chats          []*common.Chat
 }
 
 var broadcasters = make(map[string]*Broadcaster)
@@ -39,24 +41,43 @@ func connectionDoneCallback(id string, timestamp int64) {
 	if b, ok := broadcasters[id]; ok && b.Timestamp == timestamp {
 		delete(broadcasters, id)
 		lock.Unlock()
-		// TODO: Put chat message into database.
-		// TODO: Put operations into database, if any.
 		if b.audioTimestamp == nil || *b.audioTimestamp == 0 {
+			return
+		}
+		cid, err := strconv.Atoi(id)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		vid, err := vod.AddVideo(cid, "New Video "+time.Now().Format("2006-01-02 15:04:05"), b.Timestamp, b.Pdf)
+		if err != nil {
+			log.Println("failed to add video")
+			log.Println(err)
 			return
 		}
 		for _, c := range b.chats {
 			c.ElapsedTime -= *b.audioTimestamp
+			if err := vod.AddChat(vid, c); err != nil {
+				log.Println("failed to add chat")
+				log.Println(err)
+			}
 		}
 		for _, o := range b.operations {
 			o.ElapsedTime -= *b.audioTimestamp
+			if err := vod.AddOperation(vid, o); err != nil {
+				log.Println("failed to add operation")
+				log.Println(err)
+			}
 		}
-		output := make(map[string]interface{})
-		output["Pdf"] = b.Pdf
-		output["Qualities"] = []string{"0", "1", "2", "3"}
-		output["Chats"] = b.chats
-		output["Operations"] = b.operations
-		j, _ := json.MarshalIndent(output, "", "    ")
-		println(string(j))
+		/*
+			output := make(map[string]interface{})
+			output["Pdf"] = b.Pdf
+			output["Qualities"] = []string{"0", "1", "2", "3"}
+			output["Chats"] = b.chats
+			output["Operations"] = b.operations
+			j, _ := json.MarshalIndent(output, "", "    ")
+			println(string(j))
+		*/
 	} else {
 		lock.Unlock()
 	}
@@ -64,10 +85,21 @@ func connectionDoneCallback(id string, timestamp int64) {
 
 func trackDoneCallback(id string, timestamp int64, quality int, filename string) {
 	log.Printf("track: %v %v %v %v is over\n", id, timestamp, quality, filename)
-	// TODO: Move the handled video to proper position, and put relative data into database.
+	cid, err := strconv.Atoi(id)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	if v, err := vod.GetVideo(-1, cid, timestamp); err != nil {
+		log.Println("failed to find video when finalizing handled track")
+		log.Println(err)
+	} else if err := vod.AddMedia(int64(v.Id), quality, filename); err != nil {
+		log.Println("failed to insert media when finalizing handled track")
+		log.Println(err)
+	}
 }
 
-func liveMessageCallback(id string, c *chat.Chat) {
+func HandleMessage(id string, c *common.Chat) {
 	lock.RLock()
 	b, ok := broadcasters[id]
 	lock.RUnlock()
@@ -79,7 +111,6 @@ func liveMessageCallback(id string, c *chat.Chat) {
 func init() {
 	rtc.SetConnectionDoneCallback(connectionDoneCallback)
 	rtc.SetTrackDoneCallback(trackDoneCallback)
-	chat.SetLiveMessageCallback(liveMessageCallback)
 	sock.RegisterHandler(Tag, sockHandler)
 }
 
@@ -122,7 +153,6 @@ func add(id string, tracks []string, pdf string, sdpString string) (*webrtc.Sess
 	if ans, err := rtc.NewPeerConnectionWriter(id, t, tracks, &audioTimestamp, &webrtc.SessionDescription{Type: webrtc.SDPTypeOffer, SDP: sdpString}); err != nil {
 		return nil, -1, err
 	} else {
-		// TODO: Put metadata into database.
 		lock.Lock()
 		defer lock.Unlock()
 		broadcasters[id] = &Broadcaster{Timestamp: t, Qualities: len(tracks), Pdf: pdf, audioTimestamp: &audioTimestamp}

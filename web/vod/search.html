@@ -133,16 +133,14 @@
                         <div class="card-body">
                             <div>
                                 <div class="row">
-                                    <div class="col-3"><label>Search Id</label></div>
-                                    <div class="col-3"><label>Search Username</label></div>
-                                    <div class="col-3"><label>Search Title</label></div>
-                                    <div class="col-3"><label>Go Search</label></div>
+                                    <div class="col-4"><label>Search Id</label></div>
+                                    <div class="col-4"><label>Search Name</label></div>
+                                    <div class="col-4"><label>Go Search</label></div>
                                 </div>
                                 <div class="row">
-                                    <div class="col-3"><input class="form-control" placeholder="Forum Id" v-model="search.id"></div>
-                                    <div class="col-3"><input class="form-control" placeholder="Author Username" v-model="search.username"></div>
-                                    <div class="col-3"><input class="form-control" placeholder="Forum Title" v-model="search.title"></div>
-                                    <div class="col-3"><button class="btn btn-primary" v-on:click="Search(true)">Search</button></div>
+                                    <div class="col-4"><input class="form-control" placeholder="Video Id" v-model="search.id"></div>
+                                    <div class="col-4"><input class="form-control" placeholder="Video Name" v-model="search.name"></div>
+                                    <div class="col-4"><button class="btn btn-primary" v-on:click="Search(true)">Search</button></div>
                                 </div>
                             </div>
                             <div class="row">
@@ -151,22 +149,23 @@
                             <table class="table table-bordered" style="/*word-wrap:break-word; word-break:break-all;*/">
                                 <thead>
                                 <tr>
-                                    <th style="width: 10%">Id</th>
-                                    <th style="width: 20%">Username</th>
-                                    <th style="width: 10%">Title</th>
-                                    <th style="width: 10%">Time</th>
-                                    <th style="width: 15%">Operation</th>
+                                    <th style="width: 20%">Id</th>
+                                    <th style="width: 30%">Name</th>
+                                    <th style="width: 30%">Time</th>
+                                    <th style="width: 20%">Operation</th>
                                 </tr>
                                 </thead>
                                 <tbody>
                                 <tr v-for="x in display">
                                     <td>{{x.Id}}</td>
-                                    <td>{{x.Username}}</td>
-                                    <td><a v-bind:href="'../forum/forum.html?course='+course+'&id='+ x.Id">{{x.Title}}</a></td>
+                                    <td><a v-bind:href="'../vod/vod.html?course='+course+'&id='+ x.Id">{{x.Name}}</a></td>
                                     <td>{{x.Time}}</td>
-                                    <td><button v-if="relation>=2||x.User===uid" v-on:click="Delete(x.Id)" class="btn btn-primary">Delete</button></td>
+                                    <td>
+                                        <button v-if="relation>=2||x.User===uid" class="btn btn-primary" data-toggle="modal" data-target="#dlgSetName" v-on:click="SetDlgName(x.Id, x.Name)">Rename</button>
+                                        <button v-if="relation>=2||x.User===uid" v-on:click="Delete(x.Id)" class="btn btn-primary">Delete</button>
+                                    </td>
                                 </tr>
-                                <tr v-if="!display.length"><td colspan="5" style="text-align: center">No results found.</td></tr>
+                                <tr v-if="!display.length"><td colspan="4" style="text-align: center">No results found.</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -191,28 +190,39 @@
                 <div class="col-md-12">
                     <div class="card card-primary">
                         <div class="card-header">
-                            <h3 class="card-title">New Post</h3>
+                            <h3 class="card-title">New Video</h3>
                         </div>
                         <form id="form" class="form-horizontal">
                             <input hidden name="course" v-bind:value="course"/>
                             <div class="card-body">
                                 <div class="form-group row">
-                                    <label class="col-sm-2 col-form-label">Title</label>
+                                    <label class="col-sm-2 col-form-label">Name</label>
                                     <div class="col-sm-10">
-                                        <input id="inputTitle" name="title" class="form-control" placeholder="Title"/>
+                                        <input id="inputName" name="name" class="form-control" placeholder="Name"/>
                                     </div>
                                 </div>
                                 <div class="form-group row">
-                                    <label class="col-sm-2 col-form-label">Content</label>
+                                    <label class="col-sm-2 col-form-label">Quality</label>
                                     <div class="col-sm-10">
-                                        <textarea id="textContent" name="content" class="form-control" rows="3" placeholder="Content"></textarea>
+                                        <select id="selectQuality" name="quality" class="form-control">
+                                            <option value="3" selected>144p & 360p & 576p</option>
+                                            <option value="2">144p & 360p</option>
+                                            <option value="1">144p</option>
+                                            <option value="0">Audio only</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="col-sm-2 col-form-label">Video File</label>
+                                    <div class="col-sm-10">
+                                        <input id="inputFile" type="file" name="file">
                                     </div>
                                 </div>
                             </div>
                         </form>
                         <div class="card-footer">
-                            <button class="btn btn-primary" onclick="AddForum()">Post</button>
-                            <button class="btn btn-primary float-right" onclick="$('#inputTitle').val('');$('#textContent').val('');">Clear</button>
+                            <button class="btn btn-primary" onclick="AddVideo()">Add</button>
+                            <button class="btn btn-primary float-right" onclick="$('#inputName').val('');$('#selectQuality').val('3');$('#inputFile').val('');">Clear</button>
                         </div>
                     </div>
                 </div>
@@ -247,15 +257,19 @@
                 </button>
             </div>
             <div class="modal-body">
-                <form id="formInfo">
-                    <p>
-                        <input id="inputSetName" name="tag" class="form-control" placeholder="Tag">
-                    </p>
+                <input id="inputSetNameVideo" hidden>
+                <form id="formSetName">
+                    <div class="form-group row">
+                        <label class="col-sm-2 col-form-label">Name</label>
+                        <div class="col-sm-10">
+                            <input id="inputSetName" name="name" class="form-control" placeholder="Name">
+                        </div>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer justify-content-between">
-                <button type="button" class="btn btn-default" onclick="SetName(false)">Close</button>
                 <button type="button" class="btn btn-primary" onclick="SetName(true)">Commit</button>
+                <button type="button" class="btn btn-default" onclick="SetName(false)">Close</button>
             </div>
         </div>
         <!-- /.modal-content -->
@@ -304,8 +318,7 @@
             relation: 0,
             search: {
                 id: "",
-                username: "",
-                title: "",
+                name: "",
                 page: "0"
             },
             display: [],
@@ -314,8 +327,12 @@
             pageSize: pageSize
         },
         methods: {
+            SetDlgName(id, name) {
+                $('#inputSetNameVideo').val(id);
+                $('#inputSetName').val(name);
+            },
             Delete: function (i) {
-                Ajax(Api("forum/forum/delete/" + i), null, null, "DELETE", function (data) {
+                Ajax(Api("vod/video/delete/" + i), null, null, "DELETE", function (data) {
                     alert("Operation success.");
                     LoadData();
                 });
@@ -324,8 +341,7 @@
                 this.filtered = [];
                 for (let i = 0; i < this.data.length; i++) {
                     if ((!this.search.id || this.data[i]["Id"] === parseInt(this.search.id)) &&
-                        (!this.search.username || this.data[i]["Username"].indexOf(this.search.username) !== -1) &&
-                        (!this.search.title || this.data[i]["Title"].indexOf(this.search.title) !== -1)
+                        (!this.search.name || this.data[i]["Name"].indexOf(this.search.name) !== -1)
                     ) {
                         this.filtered.push(this.data[i]);
                     }
@@ -349,24 +365,40 @@
         }
     });
     function LoadData() {
-        Ajax(Api("forum/forum/search"), {"course": videos.$data.course}, null, "GET", function (data) {
+        Ajax(Api("vod/video/search"), {"course": videos.$data.course}, null, "GET", function (data) {
             console.log(data);
             if (!data) {
                 data = [];
             }
             videos.$data.data = data;
             for (let i = 0; i < videos.$data.data.length; i++) {
-                videos.$data.data[i]["Time"] = new Date(data[i]["Time"]).toUTCString();
+                videos.$data.data[i]["Time"] = new Date(data[i]["Timestamp"]).toUTCString();
             }
             videos.Search(false);
         });
     }
-    function AddForum() {
-        Ajax(Api("forum/forum/add/"), null, new FormData($("#form")[0]), "PUT", function(data) {
-            alert("Post added!");
-            $("#inputTitle").val("");
-            $("#textContent").val("");
+    function AddVideo() {
+        if ($('#inputFile').val() === "") {
+            alert("No file selected");
+            return;
+        }
+        Ajax(Api("vod/video/add"), null, new FormData($("#form")[0]), "PUT", function(data) {
+            alert("Video added!\nPlease note: the video will not be shown unless at least one of its media source has been transcoded.");
+            $('#inputName').val('');
+            $('#selectQuality').val('3');
+            $('#inputFile').val('');
             LoadData();
+        }, null, false);
+    }
+    function SetName(confirm) {
+        if (!confirm) {
+            $("#dlgSetName").modal("hide");
+            return;
+        }
+        Ajax(Api("vod/video/set/" + $("#inputSetNameVideo").val()), null, new FormData($("#formSetName")[0]), "POST", function(data) {
+            alert("Video Renamed!");
+            LoadData();
+            $("#dlgSetName").modal("hide");
         }, null, false);
     }
 </script>

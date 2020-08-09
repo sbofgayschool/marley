@@ -151,10 +151,10 @@
                             <span id="spanAudience" style="float: right">Current Relation: {{relationMessage}}</span>
                         </div>
                         <div class="card-body">
-                            <a v-bind:href="'../live/student.html?id='+id" class="btn btn-primary">Watch Live Video</a>
-                            <a v-bind:href="'../live/teacher.html?id='+id" class="btn btn-primary" v-if="relation >= 2">Broadcast Live Video</a>
-                            <a v-bind:href="'../vod/search.html?id='+id" class="btn btn-primary">Watch Video on Demand</a>
-                            <a v-bind:href="'../forum/search.html?course='+id" class="btn btn-primary">Go to Forum</a>
+                            <a v-bind:href="'../live/student.html?course='+id" class="btn btn-primary">Live Room</a>
+                            <a v-bind:href="'../live/teacher.html?course='+id" class="btn btn-primary" v-if="relation >= 2">Live Host</a>
+                            <a v-bind:href="'../vod/search.html?course='+id" class="btn btn-primary">Video List</a>
+                            <a v-bind:href="'../forum/search.html?course='+id" class="btn btn-primary">Forum</a>
                             <button v-if="relation!==3" v-on:click="Subscribe()" class="btn btn-primary">{{relation ? "Unsubscribe" : "Learn"}}</button></td>
                         </div>
                         <div class="card-footer">
@@ -269,7 +269,7 @@
                     </div>
                 </div>
             </div>
-            <div class="row">
+            <div class="row" id="rowNewComment" v-if="relation > 0 && available">
                 <div class="col-md-12">
                     <div class="card card-primary">
                         <div class="card-header">
@@ -334,17 +334,23 @@
             </div>
             <div class="modal-body">
                 <form id="formInfo">
-                    <p>
-                        <input id="inputTag" name="tag" class="form-control" placeholder="Tag">
-                    </p>
-                    <p>
-                        <textarea id="textNote" name="note" class="form-control" rows="3" placeholder="Note"></textarea>
-                    </p>
+                    <div class="form-group row">
+                        <label class="col-sm-2 col-form-label">Tag</label>
+                        <div class="col-sm-10">
+                            <input id="inputTag" name="tag" class="form-control" placeholder="Tag">
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <label class="col-sm-2 col-form-label">Note</label>
+                        <div class="col-sm-10">
+                            <textarea id="textNote" name="note" class="form-control" rows="3" placeholder="Note"></textarea>
+                        </div>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer justify-content-between">
-                <button type="button" class="btn btn-default" onclick="SetInfo(false)">Close</button>
                 <button type="button" class="btn btn-primary" onclick="SetInfo(true)">Commit</button>
+                <button type="button" class="btn btn-default" onclick="SetInfo(false)">Close</button>
             </div>
         </div>
         <!-- /.modal-content -->
@@ -493,6 +499,13 @@
             }
         }
     });
+    let newComment = new Vue({
+        el: "#rowNewComment",
+        data: {
+            relation: 0,
+            available: true
+        }
+    });
     function LoadInfo() {
         Ajax(Api("course/course/get/" + operation.$data.id), null, null, "GET", function (data) {
             info.$data.name = data.Name;
@@ -505,6 +518,8 @@
             operation.$data.relationMessage = RelationMessage(info.$data.relation);
 
             users.$data.owner = data.Owner === user.$data.id;
+
+            newComment.$data.relation = info.$data.relation;
 
             $("#inputTag").val(info.$data.tag);
             $("#textNote").val(info.$data.note);
@@ -527,10 +542,14 @@
     function LoadComment() {
         Ajax(Api("course/comment/search/" + operation.$data.id), null, null, "GET", function (data) {
             console.log(data);
+            newComment.$data.available = true;
             if (!data) {
                 data = [];
             }
             for (let i = 0; i < data.length; i++) {
+                if (data[i]["User"] === user.$data.id) {
+                    newComment.$data.available = false;
+                }
                 data[i]["Title"] = data[i]["Username"] + " - " + data[i]["Rate"] + " - " + new Date(data[i]["Time"]).toUTCString();
             }
             comments.$data.filtered = data;

@@ -29,7 +29,6 @@ func RegisterHandler(tag string, f func(*Message, chan *Message) []*Message) {
 
 func handler(msg *Message, broker chan *Message) []*Message {
 	if h, ok := registeredHandler[msg.Content.(map[string]interface{})[TagField].(string)]; ok {
-
 		return h(msg, broker)
 	}
 	return nil
@@ -108,9 +107,8 @@ func (c *Client) send(content interface{}, broker chan *Message, counter *sync.W
 			return
 		}
 		c.lock.Lock()
-		l := c.output.Len()
 		c.output.Remove(c.output.Front())
-		if l == 1 {
+		if c.output.Len() == 0 {
 			c.lock.Unlock()
 			return
 		}
@@ -120,15 +118,12 @@ func (c *Client) send(content interface{}, broker chan *Message, counter *sync.W
 }
 
 func (c *Client) scheduleSend(content interface{}, broker chan *Message, counter *sync.WaitGroup) {
+	c.lock.Lock()
 	if c.output.Len() != 0 {
-		c.lock.Lock()
 		defer c.lock.Unlock()
 		c.output.PushBack(content)
-		if c.output.Len() == 1 {
-			counter.Add(1)
-			go c.send(content, broker, counter)
-		}
 	} else {
+		c.lock.Unlock()
 		c.output.PushBack(content)
 		counter.Add(1)
 		go c.send(content, broker, counter)
@@ -145,6 +140,7 @@ func (c *Client) recv(broker chan *Message, counter *sync.WaitGroup) {
 				return
 			} else {
 				log.Println(err)
+				broker <- &Message{operation: OptLeave, Client: c}
 				return
 			}
 		}
